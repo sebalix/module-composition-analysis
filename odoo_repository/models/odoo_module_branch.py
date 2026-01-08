@@ -606,21 +606,16 @@ class OdooModuleBranch(models.Model):
             # it hasn't been imported already thanks to the related commit SHA
             version = self._get_existing_version(module, manifest_value, data["commit"])
             if version and module_branch:
-                # Skip if the version has already been imported for a
-                # previous Odoo release
+                # Reset the commit if the version has already been imported for a
+                # previous Odoo version.
                 if version.branch_id.sequence < module_branch.branch_id.sequence:
-                    continue
+                    data["commit"] = False  # module_branch.branch_id.name
                 # Corner case: we scanned a version that was already imported
-                # through a newer Odoo branch. Downgrade the existing version
-                # to the current module branch.
-                if version.branch_id.sequence > module_branch.branch_id.sequence:
-                    version.write(
-                        {
-                            "module_branch_id": module_branch.id,
-                            "name": name,
-                        }
-                    )
-                    continue
+                # through a newer Odoo version. Reset the commit on it as it
+                # doesn't belong to this newer Odoo version.
+                elif version.branch_id.sequence > module_branch.branch_id.sequence:
+                    version.commit = False  # version.branch_id.name
+                    # continue
             module_version = module_branch.version_ids.filtered(
                 lambda v, name=name, manifest_value=manifest_value: (
                     v.name == name and v.manifest_value == manifest_value
