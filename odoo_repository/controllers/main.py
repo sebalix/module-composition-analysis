@@ -8,7 +8,13 @@ from odoo import http
 
 class OdooRepository(http.Controller):
     @http.route("/odoo-repository/data", type="http", auth="none", csrf=False)
-    def index(self, orgs: str = None, repositories: str = None, branches: str = None):
+    def index(
+        self,
+        orgs: str = None,
+        repositories: str = None,
+        branches: str = None,
+        modules: str = None,
+    ):
         """Returns modules data as JSON.
 
         This endpoint is used by secondary nodes that want to sync the data
@@ -23,10 +29,14 @@ class OdooRepository(http.Controller):
             repositories = repositories.split(",")
         if branches:
             branches = branches.split(",")
+        if modules:
+            modules = modules.split(",")
         data = (
             http.request.env["odoo.module.branch"]
             .sudo()
-            ._get_modules_data(orgs=orgs, repositories=repositories, branches=branches)
+            ._get_modules_data(
+                orgs=orgs, repositories=repositories, branches=branches, modules=modules
+            )
         )
         headers = {"Content-Type": "application/json"}
         return http.request.make_response(json.dumps(data), headers)

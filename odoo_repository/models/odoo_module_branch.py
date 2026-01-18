@@ -805,7 +805,9 @@ class OdooModuleBranch(models.Model):
         return self.create(values)
 
     # TODO adds ormcache
-    def _get_modules_data(self, orgs=None, repositories=None, branches=None):
+    def _get_modules_data(
+        self, orgs=None, repositories=None, branches=None, modules=None
+    ):
         """Returns modules data matching the criteria.
 
         E.g.:
@@ -814,17 +816,20 @@ class OdooModuleBranch(models.Model):
             ...     orgs=['OCA'],
             ...     repositories=['server-env'],
             ...     branches=['15.0', '16.0'],
+            ...     modules=["server_environment"],
             ... )
 
         """
-        domain = self._get_modules_domain(orgs, repositories, branches)
+        domain = self._get_modules_domain(orgs, repositories, branches, modules)
         modules = self.search(domain)
         data = []
         for module in modules:
             data.append(module._to_dict())
         return data
 
-    def _get_modules_domain(self, orgs=None, repositories=None, branches=None):
+    def _get_modules_domain(
+        self, orgs=None, repositories=None, branches=None, modules=None
+    ):
         domain = [
             # Do not return orphans modules
             ("org_id", "!=", False),
@@ -837,6 +842,8 @@ class OdooModuleBranch(models.Model):
             domain.append(("repository_id", "in", repositories))
         if branches:
             domain.append(("branch_id", "in", branches))
+        if modules:
+            domain.append(("module_name", "in", modules))
         return domain
 
     def _to_dict(self):
