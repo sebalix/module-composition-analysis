@@ -8,6 +8,13 @@
     <field name="model">odoo.module.branch.migration</field>
     <field name="arch" type="xml">
       <form>
+        <header>
+          <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="migrate,review_migration,port_commits,fully_ported"
+                    />
+        </header>
         <sheet>
           <div class="oe_title">
             <h1><field name="display_name" /></h1>
@@ -24,6 +31,11 @@
                                 attrs="{'invisible': [('renamed_to_module_id', '=', False)]}"
                             />
               <field name="target_module_branch_id" />
+              <field
+                                name="pr_url"
+                                widget="url"
+                                attrs="{'invisible': [('pr_url', '=', False)]}"
+                            />
             </group>
             <group name="scan" string="Scan">
               <field name="last_source_scanned_commit" />
@@ -31,10 +43,20 @@
               <field name="migration_scan" />
             </group>
           </group>
-          <group name="data" string="Data">
-            <field name="state" />
-            <field name="pr_url" widget="url" />
-            <field name="results_text" />
+          <group
+                        name="missing_commits"
+                        string="Missing Commits"
+                        attrs="{'invisible': [('missing_commits', '=', False)]}"
+                    >
+            <field name="missing_commits" nolabel="1" colspan="2" />
+            <separator string="How to migrate them" />
+            <field
+                            name="port_missing_commits_cmd"
+                            nolabel="1"
+                            colspan="2"
+                            widget="ace"
+                            options="{'mode': 'sh'}"
+                        />
           </group>
         </sheet>
       </form>
@@ -52,7 +74,6 @@
         <field name="state" optional="hide" />
         <field name="pr_url" widget="url" />
         <field name="migration_scan" optional="hide" />
-        <field name="results_text" optional="hide" />
       </tree>
     </field>
   </record>

@@ -3,7 +3,69 @@
 
 import pprint
 
+from jinja2 import BaseLoader, Environment
+
 from odoo import api, fields, models
+
+# Jinja2 template used to render commits data in HTML
+MISSING_COMMITS_TMPL = """
+<table class="o_list_table table table-sm table-hover">
+    <thead>
+        <th>PR</th>
+        <th>Title</th>
+        <th>Commits</th>
+        <th>Author</th>
+        <th>Merged at</th>
+    </thead>
+    {% for pr_number, data in prs.items() %}
+    <tr>
+        {% if pr_number %}
+        <td>
+            <a style="color: #66598f" href="{{ data["url"] }}">#{{ pr_number }}</a>
+        </td>
+        <td>
+            <a style="color: #66598f"
+                href="{{ data["url"] }}">{{ data["title"] }}</a>
+        </td>
+        <td>
+            <ul>
+                {% for commit in data["missing_commits"] %}
+                <li>
+                    <a href="{{ data["url"] }}/commits/{{ commit }}">{{ commit }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </td>
+        <td>{{ data["author"] }}</td>
+        <td>{{ data["merged_at"] }}</td>
+        {% else  %}
+        <td>N/A</td>
+        <td>
+            <span>Commits without PRs</span>
+        </td>
+        <td>
+            <ul>
+                {% for commit in data["missing_commits"] %}
+                <li>
+                    <a style="color: #495057">{{ commit }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </td>
+        <td/>
+        <td/>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+"""
+
+OCA_PORT_CMD_TMPL = """
+$ git clone -b {target_branch} {target_repo_branch.repository_id.clone_url}
+$ cd {target_repo_branch.repository_id.name}
+$ oca-port origin/{source_branch} origin/{target_branch} \
+    {rec.module_branch_id.module_name} --fetch --verbose
+"""
 
 
 class OdooModuleBranchMigration(models.Model):
@@ -101,10 +163,10 @@ class OdooModuleBranchMigration(models.Model):
     )
     state = fields.Selection(
         selection=[
-            ("fully_ported", "Fully Ported"),
             ("migrate", "To migrate"),
-            ("port_commits", "Ported (missing commits?)"),
             ("review_migration", "To review"),
+            ("port_commits", "Ported (missing commits?)"),
+            ("fully_ported", "Fully Ported"),
             ("replaced", "Replaced"),
             ("moved_to_standard", "Moved to standard?"),
             ("moved_to_oca", "Moved to OCA"),
@@ -122,6 +184,8 @@ class OdooModuleBranchMigration(models.Model):
     )
     results = fields.Serialized()
     results_text = fields.Text(compute="_compute_results_text")
+    missing_commits = fields.Html(compute="_compute_missing_commits")
+    port_missing_commits_cmd = fields.Text(compute="_compute_missing_commits")
     last_source_scanned_commit = fields.Char()
     last_target_scanned_commit = fields.Char()
     active = fields.Boolean(related="migration_path_id.active", store=True)
@@ -273,6 +337,34 @@ class OdooModuleBranchMigration(models.Model):
     def _compute_results_text(self):
         for rec in self:
             rec.results_text = pprint.pformat(rec.results)
+
+    @api.depends("results")
+    def _compute_missing_commits(self):
+        for rec in self:
+            rec.missing_commits = False
+            if rec.state != "port_commits":
+                continue
+            # HTML table listing commits grouped by PR
+            rtemplate = Environment(loader=BaseLoader).from_string(MISSING_COMMITS_TMPL)
+            rec.missing_commits = rtemplate.render(prs=rec.results)
+            # oca-port command to port them
+            source_repo_branch = rec.module_branch_id.repository_branch_id
+            target_repo_branch = rec.target_module_branch_id.repository_branch_id
+            source_branch = (
+                source_repo_branch.cloned_branch or source_repo_branch.branch_id.name
+            )
+            target_branch = (
+                target_repo_branch.cloned_branch or target_repo_branch.branch_id.name
+            )
+            # TODO:
+            #   '--move-to' parameter if module has been renamed
+            #   'git remote add' command if move has been moved to another repo
+            rec.port_missing_commits_cmd = OCA_PORT_CMD_TMPL.format(
+                rec=rec,
+                source_branch=source_branch,
+                target_branch=target_branch,
+                target_repo_branch=target_repo_branch,
+            )
 
     @api.depends(
         "module_branch_id.last_scanned_commit",
