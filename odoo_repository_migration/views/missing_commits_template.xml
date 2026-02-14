@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <template id="missing_commits_template" name="Missing Commits Template">
+        <t t-if="prs">
+            <table class="o_list_table table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>PR</th>
+                        <th>Title</th>
+                        <th>Commits</th>
+                        <th>Author</th>
+                        <th>Merged at</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="prs.items()" t-as="pr_item">
+                        <tr>
+                            <t t-if="pr_item[0]">
+                                <td>
+                                    <a
+                                        style="color: #66598f"
+                                        t-attf-href="{{ pr_item[1]['url'] }}"
+                                    >
+                                        #{pr_item[0]}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a
+                                        style="color: #66598f"
+                                        t-attf-href="{{ pr_item[1]['url'] }}"
+                                    >
+                                        <t t-esc="pr_item[1]['title']" />
+                                    </a>
+                                </td>
+                                <td>
+                                    <ul>
+                                        <t
+                                            t-foreach="pr_item[1]['missing_commits']"
+                                            t-as="commit"
+                                        >
+                                            <li>
+                                                <a
+                                                    t-attf-href="{{ pr_item[1]['url'] }}/commits/{{ commit }}"
+                                                >
+                                                    <t t-esc="commit" />
+                                                </a>
+                                            </li>
+                                        </t>
+                                    </ul>
+                                </td>
+                                <td><t t-esc="pr_item[1]['author']" /></td>
+                                <td><t t-esc="pr_item[1]['merged_at']" /></td>
+                            </t>
+                            <t t-else="">
+                                <td>N/A</td>
+                                <td>
+                                    <span>Commits without PRs</span>
+                                </td>
+                                <td>
+                                    <ul>
+                                        <t
+                                            t-foreach="pr_item[1]['missing_commits']"
+                                            t-as="commit"
+                                        >
+                                            <li>
+                                                <a style="color: #495057">
+                                                    <t t-esc="commit" />
+                                                </a>
+                                            </li>
+                                        </t>
+                                    </ul>
+                                </td>
+                                <td />
+                                <td />
+                            </t>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+        </t>
+    </template>
+</odoo>

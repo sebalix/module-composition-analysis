@@ -3,62 +3,7 @@
 
 import pprint
 
-from jinja2 import BaseLoader, Environment
-
 from odoo import api, fields, models
-
-# Jinja2 template used to render commits data in HTML
-MISSING_COMMITS_TMPL = """
-<table class="o_list_table table table-sm table-hover">
-    <thead>
-        <th>PR</th>
-        <th>Title</th>
-        <th>Commits</th>
-        <th>Author</th>
-        <th>Merged at</th>
-    </thead>
-    {% for pr_number, data in prs.items() %}
-    <tr>
-        {% if pr_number %}
-        <td>
-            <a style="color: #66598f" href="{{ data["url"] }}">#{{ pr_number }}</a>
-        </td>
-        <td>
-            <a style="color: #66598f"
-                href="{{ data["url"] }}">{{ data["title"] }}</a>
-        </td>
-        <td>
-            <ul>
-                {% for commit in data["missing_commits"] %}
-                <li>
-                    <a href="{{ data["url"] }}/commits/{{ commit }}">{{ commit }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </td>
-        <td>{{ data["author"] }}</td>
-        <td>{{ data["merged_at"] }}</td>
-        {% else  %}
-        <td>N/A</td>
-        <td>
-            <span>Commits without PRs</span>
-        </td>
-        <td>
-            <ul>
-                {% for commit in data["missing_commits"] %}
-                <li>
-                    <a style="color: #495057">{{ commit }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </td>
-        <td/>
-        <td/>
-        {% endif %}
-    </tr>
-    {% endfor %}
-</table>
-"""
 
 OCA_PORT_CMD_TMPL = """
 $ git clone -b {target_branch} {target_repo_branch.repository_id.clone_url}
@@ -345,8 +290,10 @@ class OdooModuleBranchMigration(models.Model):
             if rec.state != "port_commits":
                 continue
             # HTML table listing commits grouped by PR
-            rtemplate = Environment(loader=BaseLoader).from_string(MISSING_COMMITS_TMPL)
-            rec.missing_commits = rtemplate.render(prs=rec.results)
+            template = self.env.ref(
+                "odoo_repository_migration.missing_commits_template"
+            )
+            rec.missing_commits = template._render({"prs": rec.results})
             # oca-port command to port them
             source_repo_branch = rec.module_branch_id.repository_branch_id
             target_repo_branch = rec.target_module_branch_id.repository_branch_id
