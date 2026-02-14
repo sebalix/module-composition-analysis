@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Sébastien Alix
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+  <template id="missing_commits_template" name="Missing Commits Template">
+    <t t-name="missing_commits_template">
+      <table class="o_list_table table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>PR</th>
+            <th>Title</th>
+            <th>Commits</th>
+            <th>Author</th>
+            <th>Merged at</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="prs.items()" t-as="pr_number, data">
+            <tr>
+              <t t-if="pr_number">
+                <td>
+                  <a style="color: #66598f" t-attf-href="{{ data['url'] }}">#{{ pr_number }}</a>
+                </td>
+                <td>
+                  <a style="color: #66598f" t-attf-href="{{ data['url'] }}">{{ data['title'] }}</a>
+                </td>
+                <td>
+                  <ul>
+                    <t t-foreach="data['missing_commits']" t-as="commit">
+                      <li>
+                        <a t-attf-href="{{ data['url'] }}/commits/{{ commit }}">{{ commit }}</a>
+                      </li>
+                    </t>
+                  </ul>
+                </td>
+                <td>{{ data['author'] }}</td>
+                <td>{{ data['merged_at'] }}</td>
+              </t>
+              <t t-else="">
+                <td>N/A</td>
+                <td>
+                  <span>Commits without PRs</span>
+                </td>
+                <td>
+                  <ul>
+                    <t t-foreach="data['missing_commits']" t-as="commit">
+                      <li>
+                        <a style="color: #495057">{{ commit }}</a>
+                      </li>
+                    </t>
+                  </ul>
+                </td>
+                <td/>
+                <td/>
+              </t>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+    </t>
+  </template>
+</odoo>

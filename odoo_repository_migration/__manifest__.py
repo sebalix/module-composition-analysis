@@ -10,6 +10,7 @@
     "data": [
         "security/ir.model.access.csv",
         "data/queue_job.xml",
+        "views/missing_commits_template.xml",
         "views/odoo_migration_path.xml",
         "views/odoo_module_branch.xml",
         "views/odoo_module_branch_migration.xml",
