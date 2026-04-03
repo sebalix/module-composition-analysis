@@ -79,13 +79,13 @@ class OdooProjectExportMigrationReport(models.TransientModel):
         # org_model = self.env["odoo.repository.org"]
         project_module_mig_model = self.env["odoo.project.module.migration"]
         repo_model = self.env["odoo.repository"]
-        group_by_repo = project_module_mig_model.read_group(
+        group_by_repo = project_module_mig_model._read_group(
             [
                 ("odoo_project_id", "=", self.odoo_project_id.id),
                 ("migration_path_id", "=", self.migration_path_id.id),
             ],
             ["repository_id"],
-            ["repository_id"],
+            ["__count"],
         )
         for group_repo in group_by_repo:
             # Put the repository on its own line
