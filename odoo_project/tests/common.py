@@ -6,16 +6,17 @@ from odoo.tests import Form
 from odoo.addons.odoo_repository.tests import common
 
 
-class Common(common.Common):
-    def setUp(self):
-        super().setUp()
-        self.project = self.env["odoo.project"].create(
+class ProjectCommon(common.Common):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.project = cls.env["odoo.project"].create(
             {
                 "name": "TEST",
-                "odoo_version_id": self.branch.id,
+                "odoo_version_id": cls.branch.id,
             }
         )
-        self.wiz_model = self.env["odoo.project.import.modules"]
+        cls.wiz_model = cls.env["odoo.project.import.modules"]
 
     @classmethod
     def _run_import_modules(cls, project, modules_list_text, **kwargs):

@@ -1,10 +1,10 @@
 # Copyright 2024 Camptocamp SA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl)
 
-from .common import Common
+from .common import ProjectCommon
 
 
-class TestImportModules(Common):
+class TestImportModules(ProjectCommon):
     def test_import_modules_names(self):
         mod1 = "test1"
         mod2 = "test2"
