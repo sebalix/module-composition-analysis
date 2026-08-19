@@ -1,5 +1,7 @@
 # generated from manifests external_dependencies
 gitpython
+mcp>=2.0
 oca-port
 odoo-addons-parser
 pyyaml
+requests>=2.31
