@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo noupdate="1">
+    <record id="cron_refresh_next_version_state" model="ir.cron">
+        <field
+            name="name"
+        >Odoo Repository: Refresh Code Elements Next Version State</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="state">code</field>
+        <field
+            name="code"
+        >model._cron_refresh_code_elements_next_version_state()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True" />
+    </record>
+
+    <record id="queue_job_channel_refresh_next_version_state" model="queue.job.channel">
+        <field name="name">odoo_repository_refresh_next_version_state</field>
+        <field name="parent_id" ref="queue_job.channel_root" />
+    </record>
+
+    <record
+        id="queue_job_function_refresh_next_version_state"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="method">_job_refresh_code_elements_next_version_state</field>
+        <field name="channel_id" ref="queue_job_channel_refresh_next_version_state" />
+        <field name="retry_pattern" eval="{1: 60, 3: 180, 5: 600}" />
+    </record>
+</odoo>

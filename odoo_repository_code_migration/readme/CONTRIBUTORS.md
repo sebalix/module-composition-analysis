@@ -1,0 +1,2 @@
+- Akretion
+  - Sébastien Alix \<sebastien.alix@akretion.com\>

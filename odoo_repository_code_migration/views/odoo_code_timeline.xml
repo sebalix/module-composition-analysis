@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="odoo_code_timeline_view_form" model="ir.ui.view">
+        <field name="name">odoo.code.timeline.form</field>
+        <field name="model">odoo.code.timeline</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button
+                        string="Restore"
+                        name="toggle_active"
+                        type="object"
+                        invisible="active"
+                        data-hotkey="x"
+                    />
+                </header>
+                <sheet>
+                    <group name="info" string="Info">
+                        <group>
+                            <field name="element_type" />
+                            <field name="state" />
+                            <field
+                                name="model_id"
+                                invisible="element_type != 'model'"
+                                required="element_type == 'model'"
+                            />
+                            <field
+                                name="next_model_id"
+                                invisible="element_type != 'model'"
+                                required="element_type == 'model' and state == 'renamed'"
+                            />
+                            <field
+                                name="field_id"
+                                invisible="element_type != 'field'"
+                                required="element_type == 'field'"
+                            />
+                            <field
+                                name="next_field_id"
+                                invisible="element_type != 'field'"
+                                required="element_type == 'field' and state == 'renamed'"
+                            />
+                            <field
+                                name="method_id"
+                                invisible="element_type != 'method'"
+                                required="element_type == 'method'"
+                            />
+                            <field
+                                name="next_method_id"
+                                invisible="element_type != 'method'"
+                                required="element_type == 'method' and state == 'renamed'"
+                            />
+                            <field
+                                name="data_id"
+                                invisible="element_type != 'data'"
+                                required="element_type == 'data'"
+                            />
+                            <field
+                                name="next_data_id"
+                                invisible="element_type != 'data'"
+                                required="element_type == 'data' and state == 'renamed'"
+                            />
+                        </group>
+                        <group>
+                            <field name="module_branch_id" />
+                            <field name="odoo_version_id" />
+                        </group>
+                    </group>
+                    <group name="note" string="Notes">
+                        <field name="note" colspan="2" nolabel="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="odoo_code_timeline_view_tree" model="ir.ui.view">
+        <field name="name">odoo.code.timeline.list</field>
+        <field name="model">odoo.code.timeline</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="odoo_version_id" />
+                <field name="module_branch_id" />
+                <field name="element_type" />
+                <field name="state" />
+                <field name="model_id" optional="hide" />
+                <field name="next_model_id" optional="hide" />
+                <field name="field_id" optional="hide" />
+                <field name="next_field_id" optional="hide" />
+                <field name="method_id" optional="hide" />
+                <field name="next_method_id" optional="hide" />
+                <field name="data_id" optional="hide" />
+                <field name="next_data_id" optional="hide" />
+            </list>
+        </field>
+    </record>
+
+    <record id="odoo_code_timeline_view_search" model="ir.ui.view">
+        <field name="name">odoo.code.timeline.search</field>
+        <field name="model">odoo.code.timeline</field>
+        <field name="type">search</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="module_branch_id" />
+                <field name="odoo_version_id" />
+                <field name="org_id" />
+                <field name="repository_id" />
+                <filter
+                    name="element_type_model"
+                    string="Model"
+                    domain="[('element_type', '=', 'model')]"
+                />
+                <filter
+                    name="element_type_field"
+                    string="Field"
+                    domain="[('element_type', '=', 'field')]"
+                />
+                <filter
+                    name="element_type_method"
+                    string="Method"
+                    domain="[('element_type', '=', 'method')]"
+                />
+                <filter
+                    name="element_type_data"
+                    string="Data"
+                    domain="[('element_type', '=', 'data')]"
+                />
+                <separator />
+                <filter
+                    name="renamed"
+                    string="Renamed"
+                    domain="[('state', '=', 'renamed')]"
+                />
+                <filter
+                    name="removed"
+                    string="Removed"
+                    domain="[('state', '=', 'removed')]"
+                />
+                <separator />
+                <filter
+                    string="Archived"
+                    name="archived"
+                    domain="[('active', '=', False)]"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="group_by_element_type"
+                        string="Element Type"
+                        context="{'group_by': 'element_type'}"
+                    />
+                    <filter
+                        name="group_by_state"
+                        string="State"
+                        context="{'group_by': 'state'}"
+                    />
+                    <filter
+                        name="group_by_odoo_version_id"
+                        string="Odoo Version"
+                        context="{'group_by': 'odoo_version_id'}"
+                    />
+                    <filter
+                        name="group_by_module_branch_id"
+                        string="Module"
+                        context="{'group_by': 'module_branch_id'}"
+                    />
+                    <filter
+                        name="group_by_org_id"
+                        string="Organization"
+                        context="{'group_by': 'org_id'}"
+                    />
+                    <filter
+                        name="group_by_repository_id"
+                        string="Repository"
+                        context="{'group_by': 'repository_id'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="odoo_code_timeline_action" model="ir.actions.act_window">
+        <field name="name">Code Timelines</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">odoo.code.timeline</field>
+        <field name="view_id" ref="odoo_code_timeline_view_tree" />
+        <field
+            name="context"
+        >{'search_default_group_by_element_type': 1, 'search_default_group_by_odoo_version_id': 2}</field>
+    </record>
+
+    <menuitem
+        id="odoo_code_timeline_menu"
+        parent="odoo_repository_code.code_odoo_repository_menu"
+        action="odoo_code_timeline_action"
+        sequence="60"
+    />
+</odoo>

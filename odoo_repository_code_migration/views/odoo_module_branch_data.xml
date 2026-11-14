@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="odoo_module_branch_data_view_form" model="ir.ui.view">
+        <field name="name">odoo.module.branch.data.form.inherit</field>
+        <field name="model">odoo.module.branch.data</field>
+        <field
+            name="inherit_id"
+            ref="odoo_repository_code.odoo_module_branch_data_view_form"
+        />
+        <field name="arch" type="xml">
+            <field name="noupdate" position="after">
+                <field name="next_version_state" />
+                <field
+                    name="next_odoo_version_data_id"
+                    invisible="not next_odoo_version_data_id"
+                />
+            </field>
+        </field>
+    </record>
+
+    <record id="odoo_module_branch_data_view_tree" model="ir.ui.view">
+        <field name="name">odoo.module.branch.data.list.inherit</field>
+        <field name="model">odoo.module.branch.data</field>
+        <field
+            name="inherit_id"
+            ref="odoo_repository_code.odoo_module_branch_data_view_tree"
+        />
+        <field name="arch" type="xml">
+            <field name="data_type" position="after">
+                <field name="next_version_state" optional="hide" />
+            </field>
+        </field>
+    </record>
+
+    <record id="odoo_module_branch_data_view_search" model="ir.ui.view">
+        <field name="name">odoo.module.branch.data.search.inherit</field>
+        <field name="model">odoo.module.branch.data</field>
+        <field
+            name="inherit_id"
+            ref="odoo_repository_code.odoo_module_branch_data_view_search"
+        />
+        <field name="arch" type="xml">
+            <filter name="is_override" position="after">
+                <separator />
+                <filter
+                    name="removed_in_next_version"
+                    string="Removed in Next Version"
+                    domain="[('next_version_state', '=', 'removed')]"
+                />
+            </filter>
+        </field>
+    </record>
+</odoo>
