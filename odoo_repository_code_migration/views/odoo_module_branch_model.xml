@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="odoo_module_branch_model_view_form" model="ir.ui.view">
+        <field name="name">odoo.module.branch.model.form.inherit</field>
+        <field name="model">odoo.module.branch.model</field>
+        <field
+            name="inherit_id"
+            ref="odoo_repository_code.odoo_module_branch_model_view_form"
+        />
+        <field name="arch" type="xml">
+            <field name="global_dependency_level" position="after">
+                <field name="next_version_state" />
+            </field>
+        </field>
+    </record>
+
+    <record id="odoo_module_branch_model_view_tree" model="ir.ui.view">
+        <field name="name">odoo.module.branch.model.list.inherit</field>
+        <field name="model">odoo.module.branch.model</field>
+        <field
+            name="inherit_id"
+            ref="odoo_repository_code.odoo_module_branch_model_view_tree"
+        />
+        <field name="arch" type="xml">
+            <field name="model_type" position="after">
+                <field name="next_version_state" optional="hide" />
+            </field>
+        </field>
+    </record>
+</odoo>
