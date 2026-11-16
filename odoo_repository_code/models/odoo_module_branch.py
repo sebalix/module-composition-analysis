@@ -65,6 +65,10 @@ class OdooModuleBranch(models.Model):
             self._import_code_odoo_data(data.get("data") or {}, data.get("demo") or {})
         else:
             self._cleanup_code_odoo_data()
+        self._post_import_code()
+
+    def _post_import_code(self):
+        """Hook called at the end of a module code import."""
 
     def _import_code_odoo_models(self, data_models):
         self.ensure_one()
