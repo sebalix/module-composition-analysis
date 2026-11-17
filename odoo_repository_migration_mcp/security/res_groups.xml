@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="group_migration_timeline_editor" model="res.groups">
+        <field name="name">Migration Timeline Editor</field>
+        <field
+            name="category_id"
+            ref="odoo_repository.module_category_odoo_repository"
+        />
+        <field
+            name="comment"
+        >Members can create, update and delete module timelines (renames/replacements) through the MCP tools. Timelines they create are draft proposals, applied to the migration analysis only once confirmed by a reviewer in the UI.</field>
+    </record>
+</odoo>
