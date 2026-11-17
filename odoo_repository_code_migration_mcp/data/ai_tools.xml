@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record model="ai.tool" id="code_get_next_version_element_tool">
+        <field name="name">code_get_next_version_element</field>
+        <field
+            name="description"
+        >Get the next Odoo version counterpart of a code element (model, field, method or data record): where did it go? Move-aware (renames, replacements, cross-module and cross-model moves), following the confirmed module timelines (renames/replacements), the confirmed code timelines and the model's next version record.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_code_get_next_version_element</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_get_element_history_tool">
+        <field name="name">code_get_element_history</field>
+        <field
+            name="description"
+        >Get the version chain of a code element: its successive names, modules, models and Odoo versions, from the oldest to the newest known version, with the timeline (move/replacement/removal) linking each step to the next one.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_code_get_element_history</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_list_timelines_tool">
+        <field name="name">code_list_timelines</field>
+        <field
+            name="description"
+        >List the code element moves/replacements/removals declared in the database, with their review state: draft timelines are proposals pending review, not applied to the analysis yet.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_code_migration.model_odoo_code_timeline"
+        />
+        <field name="function_name">_ai_code_list_timelines</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_list_absent_elements_tool">
+        <field name="name">code_list_absent_elements</field>
+        <field
+            name="description"
+        >List the code elements of a module that are absent from its next Odoo version: the inventory feeding the migration analysis. For each element the timeline already covering it is reported (none = to analyze and propose, draft = proposal in progress, removed/confirmed = already declared). Elements whose next version is not scanned yet are excluded.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_code_list_absent_elements</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_create_timeline_tool">
+        <field name="name">code_create_timeline</field>
+        <field
+            name="description"
+        >Declare that a code element (model, field, method or data record) has been renamed, replaced, moved to another module/model or removed, starting from the next Odoo version. Use 'next_module' and/or 'next_model' for a cross-module or cross-model move; 'next_name' can be omitted when the element keeps its name/XML ID. Prefer a 'moved' timeline with the target over a 'removed' one when the target is known: it preserves the link for the migration analysis. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. The proposal is created as a draft timeline by default; set 'confirm' to true to create it directly as confirmed (high-confidence proposals only: it immediately impacts the migration analysis). The 'note' should document the sources of truth justifying it (e.g. the GitHub commit URL, the OpenUpgrade migration script URL): a source of truth URL is mandatory to confirm.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_code_migration.model_odoo_code_timeline"
+        />
+        <field name="function_name">_ai_code_create_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_update_timeline_tool">
+        <field name="name">code_update_timeline</field>
+        <field
+            name="description"
+        >Update a draft code timeline proposal (type, target module/model, new element name or note). Use 'next_module' and/or 'next_model' to change the target scope of a cross-module or cross-model move; 'next_name' can be omitted to keep the current target name/XML ID. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. Prefer a 'moved' timeline with the target over a 'removed' one when the target is known. Set 'confirm' to true to confirm it once the proposal reaches high confidence (a confirmed timeline immediately impacts the migration analysis, and a source of truth URL is required in 'note'). A confirmed timeline can only have its note updated, and the new note must carry a source URL; semantic fields cannot be modified.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_code_migration.model_odoo_code_timeline"
+        />
+        <field name="function_name">_ai_code_update_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_delete_timeline_tool">
+        <field name="name">code_delete_timeline</field>
+        <field
+            name="description"
+        >Delete a draft code timeline proposal. Confirmed timelines cannot be deleted: they are managed by humans in the UI.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_code_migration.model_odoo_code_timeline"
+        />
+        <field name="function_name">_ai_code_delete_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <!-- Attach the tools to the MCP server declared by odoo_repository_mcp -->
+    <record id="odoo_repository_mcp.mcp_server" model="mcp.server">
+        <field
+            name="tool_ids"
+            eval="[
+                (4, ref('code_get_next_version_element_tool')),
+                (4, ref('code_get_element_history_tool')),
+                (4, ref('code_list_timelines_tool')),
+                (4, ref('code_list_absent_elements_tool')),
+                (4, ref('code_create_timeline_tool')),
+                (4, ref('code_update_timeline_tool')),
+                (4, ref('code_delete_timeline_tool')),
+            ]"
+        />
+    </record>
+</odoo>
