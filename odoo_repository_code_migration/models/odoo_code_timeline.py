@@ -324,12 +324,9 @@ class OdooCodeTimeline(models.Model):
     def _get_next_element(self):
         """Return the element replacing the current one, if any."""
         self.ensure_one()
-        return (
-            self.next_model_id
-            or self.next_field_id
-            or self.next_method_id
-            or self.next_data_id
-        )
+        # The next element is always of the same type as the current one
+        # (an empty recordset of the right model when there is none)
+        return self[f"next_{self.element_type}_id"]
 
     @api.depends("model_id", "field_id", "method_id", "data_id")
     def _compute_module_branch_id(self):
