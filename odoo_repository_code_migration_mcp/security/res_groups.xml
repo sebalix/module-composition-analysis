@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="group_code_timeline_editor" model="res.groups">
+        <field name="name">Code Timeline Editor</field>
+        <field
+            name="category_id"
+            ref="odoo_repository.module_category_odoo_repository"
+        />
+        <field
+            name="comment"
+        >Members can create, update (including note annotations on confirmed timelines) and delete code timelines (element moves/replacements/removals) through the MCP tools. Timelines they create are draft proposals, applied to the analysis only once confirmed by a reviewer in the UI.</field>
+    </record>
+</odoo>
