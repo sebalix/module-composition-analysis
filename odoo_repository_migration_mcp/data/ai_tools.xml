@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record model="ai.tool" id="migration_get_module_status_tool">
+        <field name="name">migration_get_module_status</field>
+        <field
+            name="description"
+        >Get the migration status of a module for the known migration paths: status (fully_ported, migrate, port_commits, review_migration, replaced, moved_to_standard, moved_to_oca, moved_to_generic), the module it has been renamed to or replaced by, the last scanned commits and the PR url if any.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_migration_get_module_status</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="migration_list_timelines_tool">
+        <field name="name">migration_list_timelines</field>
+        <field
+            name="description"
+        >List the module renames/replacements declared in the database, with their review state: draft timelines are proposals pending review, not applied to the migration analysis yet.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_migration.model_odoo_module_branch_timeline"
+        />
+        <field name="function_name">_ai_migration_list_timelines</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="migration_get_data_tool">
+        <field name="name">migration_get_data</field>
+        <field
+            name="description"
+        >Get the migration scan data of a module for a migration path: the process, the results of the last scan (commits to port, existing PR...) and the last scanned commits.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_migration_get_data</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="migration_create_timeline_tool">
+        <field name="name">migration_create_timeline</field>
+        <field
+            name="description"
+        >Declare that a module has been renamed or replaced by another one, starting from the next Odoo version. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. The proposal is created as a draft timeline by default; set 'confirm' to true to create it directly as confirmed (high-confidence proposals only: it immediately impacts the migration analysis). The 'note' should document the sources of truth justifying it (e.g. the GitHub commit URL, the OpenUpgrade migration script URL): a source of truth URL is mandatory to confirm.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_migration.model_odoo_module_branch_timeline"
+        />
+        <field name="function_name">_ai_migration_create_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="migration_update_timeline_tool">
+        <field name="name">migration_update_timeline</field>
+        <field
+            name="description"
+        >Update a draft timeline proposal (new module, type or note). The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. Set 'confirm' to true to confirm it once the proposal reaches high confidence (a confirmed timeline immediately impacts the migration analysis, and a source of truth URL is required in 'note'). A confirmed timeline can only have its note updated, and the new note must carry a source URL; semantic fields cannot be modified.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_migration.model_odoo_module_branch_timeline"
+        />
+        <field name="function_name">_ai_migration_update_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="migration_delete_timeline_tool">
+        <field name="name">migration_delete_timeline</field>
+        <field
+            name="description"
+        >Delete a draft timeline proposal. Confirmed timelines cannot be deleted: they are managed by humans in the UI.</field>
+        <field
+            name="model_id"
+            ref="odoo_repository_migration.model_odoo_module_branch_timeline"
+        />
+        <field name="function_name">_ai_migration_delete_timeline</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <!-- Attach the tools to the MCP server declared by odoo_repository_mcp -->
+    <record id="odoo_repository_mcp.mcp_server" model="mcp.server">
+        <field
+            name="tool_ids"
+            eval="[
+                (4, ref('migration_get_module_status_tool')),
+                (4, ref('migration_list_timelines_tool')),
+                (4, ref('migration_get_data_tool')),
+                (4, ref('migration_create_timeline_tool')),
+                (4, ref('migration_update_timeline_tool')),
+                (4, ref('migration_delete_timeline_tool')),
+            ]"
+        />
+    </record>
+</odoo>
