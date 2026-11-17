@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo noupdate="1">
+    <record model="mcp.server" id="mcp_server">
+        <field name="name">Odoo MCA MCP</field>
+        <field name="description">MCP server exposing the Odoo MCA data.</field>
+    </record>
+</odoo>

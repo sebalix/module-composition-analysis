@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Akretion (https://www.akretion.com).
+     @author Sébastien Alix <sebastien.alix@akretion.com>
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record model="ai.tool" id="module_search_tool">
+        <field name="name">module_search</field>
+        <field
+            name="description"
+        >Search the Odoo modules collected from the scanned repositories. Combine the filters to narrow the results; results are paginated.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_module_search</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="module_get_details_tool">
+        <field name="name">module_get_details</field>
+        <field
+            name="description"
+        >Get the full details of a module for an Odoo version: manifest data, dependencies, versions history, code size and URLs. Returns one entry per repository hosting the module.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_module_get_details</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="module_get_dependencies_tool">
+        <field name="name">module_get_dependencies</field>
+        <field
+            name="description"
+        >Get the dependencies of a module for an Odoo version: direct or recursive, as dependencies or reverse dependencies (the modules depending on it).</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_module_get_dependencies</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="module_list_versions_tool">
+        <field name="name">module_list_versions</field>
+        <field
+            name="description"
+        >List all the versions known for a module across the Odoo versions and repositories, with their commits and migration script availability.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_module_list_versions</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="repo_list_versions_tool">
+        <field name="name">repo_list_versions</field>
+        <field
+            name="description"
+        >List the Odoo versions known to the database. These are the valid 'version' inputs of the other tools.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_branch" />
+        <field name="function_name">_ai_repo_list_versions</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="repo_list_repositories_tool">
+        <field name="name">repo_list_repositories</field>
+        <field
+            name="description"
+        >List the organizations and repositories scanned by the Odoo MCA. These are the valid 'org' and 'repository' inputs of the other tools.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_repository" />
+        <field name="function_name">_ai_repo_list_repositories</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <!-- Attach the tools to the MCP server declared by this module -->
+    <record id="mcp_server" model="mcp.server">
+        <field
+            name="tool_ids"
+            eval="[
+                (4, ref('module_search_tool')),
+                (4, ref('module_get_details_tool')),
+                (4, ref('module_get_dependencies_tool')),
+                (4, ref('module_list_versions_tool')),
+                (4, ref('repo_list_versions_tool')),
+                (4, ref('repo_list_repositories_tool')),
+            ]"
+        />
+    </record>
+</odoo>

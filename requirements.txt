@@ -2,4 +2,5 @@
 gitpython
 oca-port
 odoo-addons-parser
+pydantic
 pyyaml
