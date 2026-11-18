@@ -2,6 +2,7 @@
 # @author Sébastien Alix <sebastien.alix@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl)
 
+from collections import Counter, defaultdict
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -65,6 +66,17 @@ class ElementInput(BaseModel):
     )
 
 
+class TimelineProposal(BaseModel):
+    """Draft timeline proposal of a code element."""
+
+    timeline_type: Literal["moved", "removed"] = Field(
+        description="'moved' (renamed or replaced) or 'removed'."
+    )
+    next: ElementRef | None = Field(
+        default=None, description="Proposed target element of a move, if any."
+    )
+
+
 class NextVersionOutput(BaseModel):
     """Output of the `code_get_next_version_element` tool."""
 
@@ -81,6 +93,14 @@ class NextVersionOutput(BaseModel):
     )
     next: ElementRef | None = Field(
         default=None, description="Next version counterpart, if any."
+    )
+    proposal: TimelineProposal | None = Field(
+        default=None,
+        description=(
+            "Draft timeline proposal for the element, if any. It does not "
+            "affect 'found', 'state' or 'next', which follow confirmed "
+            "timelines only."
+        ),
     )
 
 
@@ -108,6 +128,15 @@ class HistoryOutput(BaseModel):
     history: list[HistoryEntry]
 
 
+class AbsentElementCounts(BaseModel):
+    """Resolution counters of the absent elements."""
+
+    uncovered: int = 0
+    draft: int = 0
+    removed: int = 0
+    moved: int = 0
+
+
 class AbsentElement(ElementRef):
     """Code element absent from the next Odoo version."""
 
@@ -129,6 +158,41 @@ class AbsentElement(ElementRef):
             "'confirmed'), if any."
         ),
     )
+    resolution: Literal["uncovered", "draft", "removed", "moved"] | None = Field(
+        default=None,
+        description=(
+            "Resolution status: 'uncovered' (no timeline), 'draft' (proposal "
+            "pending review), 'removed' (confirmed removal, still absent), or "
+            "'moved' (unexpected confirmed move still listed)."
+        ),
+    )
+    data_type: Literal["data", "demo"] | None = Field(
+        default=None, description="'data' or 'demo' (for data elements)."
+    )
+    noupdate: bool | None = Field(
+        default=None, description="Whether the data is in noupdate mode."
+    )
+    is_override: bool | None = Field(
+        default=None,
+        description=(
+            "Whether the data record overrides a record of another module "
+            "(for data elements)."
+        ),
+    )
+    overridden_xml_id: NullableStr = Field(
+        default=None,
+        description=(
+            "XML ID of the overridden record when 'is_override' is true "
+            "(for data elements)."
+        ),
+    )
+    next_defined_in: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Modules defining the same model in the next version, in the same "
+            "repository (for model elements)."
+        ),
+    )
 
 
 class AbsentElementsInput(BaseModel):
@@ -144,6 +208,28 @@ class AbsentElementsInput(BaseModel):
         default=None, description="Filter by element type."
     )
     model: str | None = Field(default=None, description="Filter by model name.")
+    data_type: Literal["data", "demo"] | None = Field(
+        default=None,
+        description=(
+            "Filter data elements by type. Setting any data filter restricts "
+            "the search to data elements."
+        ),
+    )
+    noupdate: bool | None = Field(
+        default=None, description="Filter data elements by noupdate mode."
+    )
+    is_override: bool | None = Field(
+        default=None,
+        description="Filter data elements by whether they override another record.",
+    )
+    resolution: Literal["uncovered", "draft", "removed", "moved"] | None = Field(
+        default=None,
+        description=(
+            "Filter by resolution status: 'uncovered' (no timeline), 'draft' "
+            "(proposal pending review), 'removed' (confirmed removal) or "
+            "'moved' (unexpected confirmed move still listed)."
+        ),
+    )
     repository: str | None = Field(
         default=None,
         description=(
@@ -164,6 +250,12 @@ class AbsentElementsOutput(BaseModel):
     total: int
     next_version: NullableStr = Field(
         default=None, description="Odoo version the elements are absent from."
+    )
+    counts: AbsentElementCounts = Field(
+        description=(
+            "Resolution counters over the elements matching every filter "
+            "except 'resolution', before pagination."
+        )
     )
     elements: list[AbsentElement]
 
@@ -246,10 +338,26 @@ class OdooModuleBranch(models.Model):
             repository=repository,
         )
         next_element = element._mcp_get_next_version_element()
+        draft = self.env["odoo.code.timeline"].search(
+            [
+                ("state", "=", "draft"),
+                ("element_type", "=", element_type),
+                (f"{element_type}_id", "=", element.id),
+            ],
+            limit=1,
+        )
+        proposal = None
+        if draft:
+            draft_next = draft._get_next_element()
+            proposal = {
+                "timeline_type": draft.timeline_type,
+                "next": (draft_next._mcp_to_element_dict() if draft_next else None),
+            }
         return {
             "found": bool(next_element),
             "state": element.next_version_state,
             "next": next_element._mcp_to_element_dict() if next_element else None,
+            "proposal": proposal,
         }
 
     @mcp_tool(ElementInput, HistoryOutput)
@@ -329,7 +437,34 @@ class OdooModuleBranch(models.Model):
             }
         return timelines
 
-    def _mcp_absent_element_dict(self, element, timelines):
+    def _mcp_get_next_defined_in(self, elements, next_version):
+        """Map (model id, repository id) to the modules defining the model in
+        the next version."""
+        model_elements = [
+            element
+            for element in elements
+            if element._name == "odoo.module.branch.model"
+        ]
+        if not model_elements:
+            return {}
+        models = self.env["odoo.module.branch.model"].search(
+            [
+                ("odoo_version_id", "=", next_version.id),
+                (
+                    "odoo_model_id",
+                    "in",
+                    [element.odoo_model_id.id for element in model_elements],
+                ),
+            ]
+        )
+        mapping = defaultdict(set)
+        for model in models:
+            mapping[(model.odoo_model_id.id, model.repository_id.id)].add(
+                model.module_name
+            )
+        return {key: sorted(module_names) for key, module_names in mapping.items()}
+
+    def _mcp_absent_element_dict(self, element, timelines, next_defined_in=None):
         """Convert an absent element to a dictionary."""
         element_type = self.env["odoo.code.timeline"]._get_element_type(element._name)
         data = element._mcp_to_element_dict()
@@ -338,6 +473,29 @@ class OdooModuleBranch(models.Model):
         timeline = timelines.get(element_type, {}).get(element.id)
         data["timeline_type"] = timeline.timeline_type if timeline else None
         data["timeline_state"] = timeline.state if timeline else None
+        if not timeline:
+            data["resolution"] = "uncovered"
+        elif timeline.state == "draft":
+            data["resolution"] = "draft"
+        elif timeline.timeline_type == "removed":
+            data["resolution"] = "removed"
+        else:
+            data["resolution"] = "moved"
+        if element_type == "data":
+            data.update(
+                {
+                    "data_type": element.data_type,
+                    "noupdate": element.noupdate,
+                    "is_override": element.is_override,
+                    "overridden_xml_id": (
+                        element.xml_id if element.is_override else None
+                    ),
+                }
+            )
+        elif element_type == "model":
+            data["next_defined_in"] = (next_defined_in or {}).get(
+                (element.odoo_model_id.id, element.repository_id.id), []
+            )
         return data
 
     @mcp_tool(AbsentElementsInput, AbsentElementsOutput)
@@ -347,12 +505,31 @@ class OdooModuleBranch(models.Model):
         version=None,
         element_type=None,
         model=None,
+        data_type=None,
+        noupdate=None,
+        is_override=None,
+        resolution=None,
         repository=None,
         limit=None,
         offset=None,
     ):
         """List the code elements of a module absent from its next Odoo
         version."""
+        data_filters = {
+            "data_type": data_type,
+            "noupdate": noupdate,
+            "is_override": is_override,
+        }
+        active_data_filters = {
+            key: value for key, value in data_filters.items() if value is not None
+        }
+        if active_data_filters:
+            if element_type not in (None, "data"):
+                raise ValueError(
+                    "The data filters ('data_type', 'noupdate', 'is_override') "
+                    "are only supported for data elements."
+                )
+            element_type = "data"
         module_ = self._mcp_get_module(module)
         branch = self._mcp_get_branch(version)
         domain = [
@@ -384,6 +561,11 @@ class OdooModuleBranch(models.Model):
             ]
             if model:
                 element_domain.append(("odoo_model_name", "=", model))
+            if model_name == "odoo.module.branch.data":
+                # Only records actually loaded by the module are relevant.
+                element_domain.append(("loaded", "=", True))
+                for field_name, value in active_data_filters.items():
+                    element_domain.append((field_name, "=", value))
             elements.extend(self.env[model_name].search(element_domain))
         elements.sort(
             key=lambda element: (
@@ -392,14 +574,27 @@ class OdooModuleBranch(models.Model):
                 getattr(element, "name", "") or "",
             )
         )
-        total = len(elements)
-        elements = elements[offset : offset + limit]
         timelines = self._mcp_get_element_timelines(elements)
+        next_defined_in = self._mcp_get_next_defined_in(elements, next_version)
+        rows = [
+            self._mcp_absent_element_dict(
+                element, timelines, next_defined_in=next_defined_in
+            )
+            for element in elements
+        ]
+        counts = Counter(row["resolution"] for row in rows)
+        if resolution:
+            rows = [row for row in rows if row["resolution"] == resolution]
+        total = len(rows)
+        rows = rows[offset : offset + limit]
         return {
             "total": total,
             "next_version": next_version.name,
-            "elements": [
-                self._mcp_absent_element_dict(element, timelines)
-                for element in elements
-            ],
+            "counts": {
+                "uncovered": counts.get("uncovered", 0),
+                "draft": counts.get("draft", 0),
+                "removed": counts.get("removed", 0),
+                "moved": counts.get("moved", 0),
+            },
+            "elements": rows,
         }

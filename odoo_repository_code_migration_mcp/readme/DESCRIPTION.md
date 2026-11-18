@@ -5,8 +5,11 @@ This module adds the code element migration tools to the MCP server
 declared by `odoo_repository_mcp`:
 
 - follow an element across the Odoo versions: its next version
-  counterpart and its full history
-- list the declared code renames/removals
+  counterpart, its full history and any draft proposal
+- list the declared code renames/removals with pagination and filters
+- list the elements absent from the next version, with their resolution
+  status, resolution counters and data classification (demo, noupdate or
+  overriding records); only data records loaded by the module are listed
 - propose new renames/removals as timelines (draft by default, or directly
   confirmed for high-confidence proposals), applied to the analysis once
   confirmed

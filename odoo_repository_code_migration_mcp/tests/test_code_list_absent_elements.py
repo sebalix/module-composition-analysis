@@ -13,6 +13,10 @@ class TestCodeListAbsentElements(McpCodeMigrationCommon):
         self.assertIsNone(result["error"])
         self.assertEqual(result["next_version"], "18.0")
         self.assertEqual(result["total"], 6)
+        self.assertEqual(
+            result["counts"],
+            {"uncovered": 4, "draft": 1, "removed": 1, "moved": 0},
+        )
         by_key = {
             (element["element_type"], element["name"]): element
             for element in result["elements"]
@@ -25,14 +29,150 @@ class TestCodeListAbsentElements(McpCodeMigrationCommon):
         self.assertEqual(gone_field["repository"], "test-repo")
         self.assertIsNone(gone_field["timeline_type"])
         self.assertIsNone(gone_field["timeline_state"])
+        self.assertEqual(gone_field["resolution"], "uncovered")
         draft = by_key[("field", "draft_field")]
         self.assertEqual(draft["timeline_type"], "moved")
         self.assertEqual(draft["timeline_state"], "draft")
+        self.assertEqual(draft["resolution"], "draft")
         removed = by_key[("method", "_removed_method")]
         self.assertEqual(removed["timeline_type"], "removed")
         self.assertEqual(removed["timeline_state"], "confirmed")
+        self.assertEqual(removed["resolution"], "removed")
         model = by_key[("model", "gone.model")]
         self.assertIsNone(model["model"])
+        self.assertEqual(model["next_defined_in"], [])
+        data = by_key[("data", "test_module_a.gone_record")]
+        self.assertEqual(data["data_type"], "data")
+        self.assertFalse(data["noupdate"])
+        self.assertFalse(data["is_override"])
+        self.assertIsNone(data["overridden_xml_id"])
+
+    def test_list__resolution_filter(self):
+        model = self.env["odoo.module.branch"]
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", resolution="uncovered"
+        )
+        self.assertEqual(result["total"], 4)
+        self.assertEqual(
+            {element["resolution"] for element in result["elements"]},
+            {"uncovered"},
+        )
+        self.assertEqual(
+            result["counts"],
+            {"uncovered": 4, "draft": 1, "removed": 1, "moved": 0},
+        )
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", resolution="draft"
+        )
+        self.assertEqual(result["total"], 1)
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", resolution="removed"
+        )
+        self.assertEqual(result["total"], 1)
+
+    def test_list__data_classification(self):
+        model = self.env["odoo.module.branch"]
+        self._create_data(
+            self.module_branch_a17,
+            self.model_version_partner_17,
+            "Demo record",
+            "demo_record",
+            data_type="demo",
+        )
+        self._create_data(
+            self.module_branch_a17,
+            self.model_version_partner_17,
+            "Noupdate record",
+            "noupdate_record",
+            noupdate=True,
+        )
+        self._create_data(
+            self.module_branch_a17,
+            self.model_version_partner_17,
+            "Override record",
+            "base.some_record",
+        )
+        self._create_data(
+            self.module_branch_a17,
+            self.model_version_partner_17,
+            "Not loaded record",
+            "not_loaded_record",
+            loaded=False,
+        )
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", element_type="data"
+        )
+        self.assertEqual(result["total"], 4)
+        self.assertNotIn(
+            "test_module_a.not_loaded_record",
+            {element["name"] for element in result["elements"]},
+        )
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a",
+            version="17.0",
+            element_type="data",
+            data_type="demo",
+        )
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["elements"][0]["data_type"], "demo")
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a",
+            version="17.0",
+            element_type="data",
+            data_type="data",
+        )
+        self.assertEqual(result["total"], 3)
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a",
+            version="17.0",
+            element_type="data",
+            noupdate=True,
+        )
+        self.assertEqual(result["total"], 1)
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a",
+            version="17.0",
+            element_type="data",
+            is_override=True,
+        )
+        self.assertEqual(result["total"], 1)
+        element = result["elements"][0]
+        self.assertEqual(element["name"], "base.some_record")
+        self.assertTrue(element["is_override"])
+        self.assertEqual(element["overridden_xml_id"], "base.some_record")
+        # A data filter restricts the search to data elements
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", data_type="demo"
+        )
+        self.assertEqual(result["total"], 1)
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a",
+            version="17.0",
+            element_type="field",
+            data_type="demo",
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("data elements", result["error"])
+
+    def test_list__next_defined_in(self):
+        module = self.env["odoo.module"].create({"name": "test_base_module"})
+        module_branch = self._create_module_branch(
+            module, self.branch18, self.repo_branch_oca_18
+        )
+        model_version = self.env["odoo.model.version"].create(
+            {
+                "odoo_model_id": self.odoo_model_gone.id,
+                "odoo_version_id": self.branch18.id,
+            }
+        )
+        self._create_model_branch(module_branch, model_version)
+        result = self.env["odoo.module.branch"]._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", element_type="model"
+        )
+        model_row = next(
+            element for element in result["elements"] if element["name"] == "gone.model"
+        )
+        self.assertEqual(model_row["next_defined_in"], ["test_base_module"])
 
     def test_list__element_type_filter(self):
         model = self.env["odoo.module.branch"]
