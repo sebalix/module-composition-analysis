@@ -95,7 +95,7 @@ class CodeMigrationCommon(MigrationCommon):
 
     @classmethod
     def _create_code_timeline(
-        cls, element, next_element=None, timeline_type="renamed", **values
+        cls, element, next_element=None, timeline_type="moved", **values
     ):
         """Create a timeline, confirmed by default."""
         element_type = cls.env["odoo.code.timeline"]._get_element_type(element._name)

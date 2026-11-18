@@ -4,7 +4,7 @@
 {
     "name": "Odoo Repository Code Migration",
     "summary": "Store the evolution of modules code elements between Odoo versions.",
-    "version": "18.0.1.2.0",
+    "version": "18.0.1.3.0",
     "category": "Tools",
     "author": "Akretion, Odoo Community Association (OCA)",
     "maintainers": ["sebalix"],

@@ -83,25 +83,25 @@
                             <field
                                 name="next_model_id"
                                 invisible="element_type != 'model'"
-                                required="element_type == 'model' and timeline_type == 'renamed'"
+                                required="element_type == 'model' and timeline_type == 'moved'"
                                 readonly="state == 'confirmed'"
                             />
                             <field
                                 name="next_field_id"
                                 invisible="element_type != 'field'"
-                                required="element_type == 'field' and timeline_type == 'renamed'"
+                                required="element_type == 'field' and timeline_type == 'moved'"
                                 readonly="state == 'confirmed'"
                             />
                             <field
                                 name="next_method_id"
                                 invisible="element_type != 'method'"
-                                required="element_type == 'method' and timeline_type == 'renamed'"
+                                required="element_type == 'method' and timeline_type == 'moved'"
                                 readonly="state == 'confirmed'"
                             />
                             <field
                                 name="next_data_id"
                                 invisible="element_type != 'data'"
-                                required="element_type == 'data' and timeline_type == 'renamed'"
+                                required="element_type == 'data' and timeline_type == 'moved'"
                                 readonly="state == 'confirmed'"
                             />
                         </group>
@@ -180,9 +180,9 @@
                     domain="[('state', '=', 'draft')]"
                 />
                 <filter
-                    name="renamed"
-                    string="Renamed"
-                    domain="[('timeline_type', '=', 'renamed')]"
+                    name="moved"
+                    string="Moved (renamed or replaced)"
+                    domain="[('timeline_type', '=', 'moved')]"
                 />
                 <filter
                     name="removed"
