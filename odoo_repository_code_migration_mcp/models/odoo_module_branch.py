@@ -66,14 +66,18 @@ class ElementInput(BaseModel):
     )
 
 
-class TimelineProposal(BaseModel):
-    """Draft timeline proposal of a code element."""
+class TimelineRef(BaseModel):
+    """Timeline linked to a code element."""
 
-    timeline_type: Literal["moved", "removed"] = Field(
+    id: int = Field(description="Timeline record id.")
+    type: Literal["moved", "removed"] = Field(
         description="'moved' (renamed or replaced) or 'removed'."
     )
-    next: ElementRef | None = Field(
-        default=None, description="Proposed target element of a move, if any."
+    state: Literal["draft", "confirmed"] = Field(
+        description="'draft' (proposal pending review) or 'confirmed'."
+    )
+    target: ElementRef | None = Field(
+        default=None, description="Target element of a move, if any."
     )
 
 
@@ -81,9 +85,6 @@ class NextVersionOutput(BaseModel):
     """Output of the `code_get_next_version_element` tool."""
 
     error: str | None = None
-    found: bool = Field(
-        description="Whether the element exists in the next Odoo version."
-    )
     state: NullableStr = Field(
         default=None,
         description=(
@@ -92,14 +93,13 @@ class NextVersionOutput(BaseModel):
         ),
     )
     next: ElementRef | None = Field(
-        default=None, description="Next version counterpart, if any."
+        default=None, description="Confirmed next version counterpart, if any."
     )
-    proposal: TimelineProposal | None = Field(
+    timeline: TimelineRef | None = Field(
         default=None,
         description=(
-            "Draft timeline proposal for the element, if any. It does not "
-            "affect 'found', 'state' or 'next', which follow confirmed "
-            "timelines only."
+            "Timeline covering the element, if any. A draft move/removal is "
+            "reported here while 'next' remains null."
         ),
     )
 
@@ -107,17 +107,9 @@ class NextVersionOutput(BaseModel):
 class HistoryEntry(ElementRef):
     """Step of the version chain of a code element."""
 
-    timeline_type: NullableStr = Field(
+    timeline: TimelineRef | None = Field(
         default=None,
-        description=(
-            "Type of the timeline linking to the next step ('moved' or 'removed')."
-        ),
-    )
-    state: NullableStr = Field(
-        default=None,
-        description=(
-            "State of the timeline linking to the next step ('draft' or 'confirmed')."
-        ),
+        description="Timeline linking the element to its next version, if any.",
     )
 
 
@@ -128,8 +120,85 @@ class HistoryOutput(BaseModel):
     history: list[HistoryEntry]
 
 
+class ElementLineageStep(BaseModel):
+    """Existing element at one Odoo version in a lineage."""
+
+    version: str = Field(description="Odoo version.")
+    element: ElementRef = Field(description="Element at this version.")
+    timeline: TimelineRef | None = Field(
+        default=None,
+        description="Outgoing timeline from this element, if any.",
+    )
+
+
+class ElementLineage(BaseModel):
+    """Full lineage of a code element across Odoo versions."""
+
+    start: ElementRef = Field(description="Starting element.")
+    target_version: str = Field(description="Target Odoo version.")
+    steps: list[ElementLineageStep] = Field(
+        description=(
+            "Existing elements ordered by version. Version jumps indicate "
+            "missing versions/scans or unresolved transitions."
+        )
+    )
+
+
+class ElementLineageOutput(ElementLineage):
+    """Output of the `code_get_element_lineage` tool."""
+
+    error: str | None = None
+
+
+class ElementLineageInput(ElementInput):
+    """Inputs of the `code_get_element_lineage` tool."""
+
+    to_version: str | None = Field(
+        default=None,
+        description=(
+            "Target Odoo version. Defaults to the latest Odoo version known to the MCA."
+        ),
+    )
+
+
+class ElementLineageBatchInput(BaseModel):
+    """Inputs of the `code_get_elements_lineage` tool."""
+
+    elements: list[ElementInput] = Field(
+        min_length=1,
+        max_length=100,
+        description="Elements to trace (between 1 and 100).",
+    )
+    to_version: str | None = Field(
+        default=None,
+        description=(
+            "Target Odoo version for all elements. Defaults to the latest "
+            "Odoo version known to the MCA."
+        ),
+    )
+
+
+class ElementLineageBatchResult(BaseModel):
+    """One element result in a batch lineage call."""
+
+    element: ElementInput = Field(description="Element requested by the caller.")
+    lineage: ElementLineage | None = Field(
+        default=None, description="Lineage, if the element was found."
+    )
+    error: str | None = Field(
+        default=None, description="Error for this element, if any."
+    )
+
+
+class ElementLineageBatchOutput(BaseModel):
+    """Output of the `code_get_elements_lineage` tool."""
+
+    error: str | None = None
+    results: list[ElementLineageBatchResult]
+
+
 class AbsentElementCounts(BaseModel):
-    """Resolution counters of the absent elements."""
+    """Timeline counters of the absent elements."""
 
     uncovered: int = 0
     draft: int = 0
@@ -144,26 +213,11 @@ class AbsentElement(ElementRef):
         default=None, description="Organization owning the repository."
     )
     repository: NullableStr = Field(default=None, description="Repository name.")
-    timeline_type: NullableStr = Field(
+    timeline: TimelineRef | None = Field(
         default=None,
         description=(
-            "Type of the timeline already covering the element ('moved' or "
-            "'removed'), if any."
-        ),
-    )
-    timeline_state: NullableStr = Field(
-        default=None,
-        description=(
-            "State of the timeline already covering the element ('draft' or "
-            "'confirmed'), if any."
-        ),
-    )
-    resolution: Literal["uncovered", "draft", "removed", "moved"] | None = Field(
-        default=None,
-        description=(
-            "Resolution status: 'uncovered' (no timeline), 'draft' (proposal "
-            "pending review), 'removed' (confirmed removal, still absent), or "
-            "'moved' (unexpected confirmed move still listed)."
+            "Timeline covering the element, if any. No timeline means the "
+            "element is uncovered and still needs analysis."
         ),
     )
     data_type: Literal["data", "demo"] | None = Field(
@@ -222,13 +276,14 @@ class AbsentElementsInput(BaseModel):
         default=None,
         description="Filter data elements by whether they override another record.",
     )
-    resolution: Literal["uncovered", "draft", "removed", "moved"] | None = Field(
+    timeline_state: Literal["none", "draft", "confirmed"] | None = Field(
         default=None,
         description=(
-            "Filter by resolution status: 'uncovered' (no timeline), 'draft' "
-            "(proposal pending review), 'removed' (confirmed removal) or "
-            "'moved' (unexpected confirmed move still listed)."
+            "Filter by timeline state: 'none' (no timeline), 'draft' or 'confirmed'."
         ),
+    )
+    timeline_type: Literal["moved", "removed"] | None = Field(
+        default=None, description="Filter by timeline type."
     )
     repository: str | None = Field(
         default=None,
@@ -253,8 +308,8 @@ class AbsentElementsOutput(BaseModel):
     )
     counts: AbsentElementCounts = Field(
         description=(
-            "Resolution counters over the elements matching every filter "
-            "except 'resolution', before pagination."
+            "Timeline counters over the elements matching every filter except "
+            "the timeline filters, before pagination."
         )
     )
     elements: list[AbsentElement]
@@ -338,26 +393,11 @@ class OdooModuleBranch(models.Model):
             repository=repository,
         )
         next_element = element._mcp_get_next_version_element()
-        draft = self.env["odoo.code.timeline"].search(
-            [
-                ("state", "=", "draft"),
-                ("element_type", "=", element_type),
-                (f"{element_type}_id", "=", element.id),
-            ],
-            limit=1,
-        )
-        proposal = None
-        if draft:
-            draft_next = draft._get_next_element()
-            proposal = {
-                "timeline_type": draft.timeline_type,
-                "next": (draft_next._mcp_to_element_dict() if draft_next else None),
-            }
+        timeline = self.env["odoo.code.timeline"]._mcp_get_timeline_for_element(element)
         return {
-            "found": bool(next_element),
             "state": element.next_version_state,
             "next": next_element._mcp_to_element_dict() if next_element else None,
-            "proposal": proposal,
+            "timeline": timeline._mcp_to_ref() if timeline else None,
         }
 
     @mcp_tool(ElementInput, HistoryOutput)
@@ -413,10 +453,131 @@ class OdooModuleBranch(models.Model):
                 limit=1,
             )
             entry = current._mcp_to_element_dict()
-            entry["timeline_type"] = outgoing.timeline_type
-            entry["state"] = outgoing.state
+            entry["timeline"] = outgoing._mcp_to_ref() if outgoing else None
             history.append(entry)
         return {"history": history}
+
+    def _mcp_get_target_branch(self, to_version=None):
+        """Return the target Odoo branch of a lineage request."""
+        branch_model = self.env["odoo.branch"].with_context(active_test=False)
+        if to_version:
+            branch = branch_model.search([("name", "=", to_version)], limit=1)
+            if not branch:
+                raise ValueError(f"Unknown Odoo version: '{to_version}'.")
+            return branch
+        branch = branch_model.search([], order="sequence desc", limit=1)
+        if not branch:
+            raise ValueError("No Odoo version known to the MCA.")
+        return branch
+
+    def _mcp_get_element_lineage(self, element, target_branch):
+        """Walk the element lineage up to the target Odoo version."""
+        timeline_model = self.env["odoo.code.timeline"]
+        steps = []
+        current = element
+        while True:
+            timeline = timeline_model._mcp_get_timeline_for_element(current)
+            steps.append(
+                {
+                    "version": current.odoo_version_id.name,
+                    "element": current._mcp_to_element_dict(),
+                    "timeline": timeline._mcp_to_ref() if timeline else None,
+                }
+            )
+            if current.odoo_version_id.sequence >= target_branch.sequence:
+                break
+            next_element = current._mcp_get_next_version_element()
+            if (
+                not next_element
+                or next_element.odoo_version_id.sequence > target_branch.sequence
+                or next_element.odoo_version_id.sequence
+                <= current.odoo_version_id.sequence
+            ):
+                break
+            current = next_element
+        return {
+            "start": element._mcp_to_element_dict(),
+            "target_version": target_branch.name,
+            "steps": steps,
+        }
+
+    @mcp_tool(ElementLineageInput, ElementLineageOutput)
+    def _ai_code_get_element_lineage(
+        self,
+        element_type=None,
+        version=None,
+        module=None,
+        model=None,
+        name=None,
+        repository=None,
+        to_version=None,
+    ):
+        """Get the full version lineage of a code element."""
+        if element_type in ("field", "method") and not model:
+            raise ValueError(
+                f"The 'model' input is required for {element_type} elements."
+            )
+        element = self._mcp_get_element(
+            element_type,
+            version,
+            module,
+            model=model,
+            name=name,
+            repository=repository,
+        )
+        target_branch = self._mcp_get_target_branch(to_version)
+        if target_branch.sequence < element.odoo_version_id.sequence:
+            raise ValueError(
+                f"The target version '{target_branch.name}' is before the "
+                f"starting version '{element.odoo_version_id.name}'."
+            )
+        return self._mcp_get_element_lineage(element, target_branch)
+
+    @mcp_tool(ElementLineageBatchInput, ElementLineageBatchOutput)
+    def _ai_code_get_elements_lineage(self, elements=None, to_version=None):
+        """Get the full version lineage of several code elements."""
+        target_branch = self._mcp_get_target_branch(to_version)
+        results = []
+        for element_input in elements:
+            element_type = element_input["element_type"]
+            try:
+                if element_type in ("field", "method") and not element_input.get(
+                    "model"
+                ):
+                    raise ValueError(
+                        f"The 'model' input is required for {element_type} elements."
+                    )
+                element = self._mcp_get_element(
+                    element_type,
+                    element_input["version"],
+                    element_input["module"],
+                    model=element_input.get("model"),
+                    name=element_input["name"],
+                    repository=element_input.get("repository"),
+                )
+                if target_branch.sequence < element.odoo_version_id.sequence:
+                    raise ValueError(
+                        f"The target version '{target_branch.name}' is before "
+                        f"the starting version "
+                        f"'{element.odoo_version_id.name}'."
+                    )
+                lineage = self._mcp_get_element_lineage(element, target_branch)
+                results.append(
+                    {
+                        "element": element_input,
+                        "lineage": lineage,
+                        "error": None,
+                    }
+                )
+            except ValueError as error:
+                results.append(
+                    {
+                        "element": element_input,
+                        "lineage": None,
+                        "error": str(error),
+                    }
+                )
+        return {"results": results}
 
     def _mcp_get_element_timelines(self, elements):
         """Return the timelines covering the given elements, by type and id."""
@@ -471,16 +632,7 @@ class OdooModuleBranch(models.Model):
         data["org"] = element.org_id.name
         data["repository"] = element.repository_id.name
         timeline = timelines.get(element_type, {}).get(element.id)
-        data["timeline_type"] = timeline.timeline_type if timeline else None
-        data["timeline_state"] = timeline.state if timeline else None
-        if not timeline:
-            data["resolution"] = "uncovered"
-        elif timeline.state == "draft":
-            data["resolution"] = "draft"
-        elif timeline.timeline_type == "removed":
-            data["resolution"] = "removed"
-        else:
-            data["resolution"] = "moved"
+        data["timeline"] = timeline._mcp_to_ref() if timeline else None
         if element_type == "data":
             data.update(
                 {
@@ -498,38 +650,37 @@ class OdooModuleBranch(models.Model):
             )
         return data
 
-    @mcp_tool(AbsentElementsInput, AbsentElementsOutput)
-    def _ai_code_list_absent_elements(
-        self,
-        module=None,
-        version=None,
-        element_type=None,
-        model=None,
-        data_type=None,
-        noupdate=None,
-        is_override=None,
-        resolution=None,
-        repository=None,
-        limit=None,
-        offset=None,
+    def _mcp_get_absent_data_filters(
+        self, element_type, data_type, noupdate, is_override
     ):
-        """List the code elements of a module absent from its next Odoo
-        version."""
+        """Return the element type and the active data filters."""
         data_filters = {
             "data_type": data_type,
             "noupdate": noupdate,
             "is_override": is_override,
         }
-        active_data_filters = {
+        active_filters = {
             key: value for key, value in data_filters.items() if value is not None
         }
-        if active_data_filters:
+        if active_filters:
             if element_type not in (None, "data"):
                 raise ValueError(
                     "The data filters ('data_type', 'noupdate', 'is_override') "
                     "are only supported for data elements."
                 )
             element_type = "data"
+        return element_type, active_filters
+
+    def _mcp_get_absent_elements(
+        self,
+        module,
+        version,
+        element_type,
+        model,
+        repository,
+        active_data_filters,
+    ):
+        """Return the absent elements and the next Odoo version."""
         module_ = self._mcp_get_module(module)
         branch = self._mcp_get_branch(version)
         domain = [
@@ -574,6 +725,71 @@ class OdooModuleBranch(models.Model):
                 getattr(element, "name", "") or "",
             )
         )
+        return elements, next_version
+
+    def _mcp_count_absent_timelines(self, rows):
+        """Count the timeline distribution of absent element rows."""
+        counts = Counter()
+        for row in rows:
+            timeline = row["timeline"]
+            if not timeline:
+                counts["uncovered"] += 1
+            elif timeline["state"] == "draft":
+                counts["draft"] += 1
+            elif timeline["type"] == "removed":
+                counts["removed"] += 1
+            else:
+                counts["moved"] += 1
+        return counts
+
+    def _mcp_filter_absent_rows(self, rows, timeline_state, timeline_type):
+        """Filter absent element rows on their timeline."""
+        if timeline_state:
+            if timeline_state == "none":
+                rows = [row for row in rows if not row["timeline"]]
+            else:
+                rows = [
+                    row
+                    for row in rows
+                    if row["timeline"] and row["timeline"]["state"] == timeline_state
+                ]
+        if timeline_type:
+            rows = [
+                row
+                for row in rows
+                if row["timeline"] and row["timeline"]["type"] == timeline_type
+            ]
+        return rows
+
+    @mcp_tool(AbsentElementsInput, AbsentElementsOutput)
+    def _ai_code_list_absent_elements(
+        self,
+        module=None,
+        version=None,
+        element_type=None,
+        model=None,
+        data_type=None,
+        noupdate=None,
+        is_override=None,
+        timeline_state=None,
+        timeline_type=None,
+        repository=None,
+        limit=None,
+        offset=None,
+    ):
+        """List the code elements of a module absent from its next Odoo
+        version."""
+        element_type, active_data_filters = self._mcp_get_absent_data_filters(
+            element_type, data_type, noupdate, is_override
+        )
+        elements, next_version = self._mcp_get_absent_elements(
+            module,
+            version,
+            element_type,
+            model,
+            repository,
+            active_data_filters,
+        )
         timelines = self._mcp_get_element_timelines(elements)
         next_defined_in = self._mcp_get_next_defined_in(elements, next_version)
         rows = [
@@ -582,9 +798,8 @@ class OdooModuleBranch(models.Model):
             )
             for element in elements
         ]
-        counts = Counter(row["resolution"] for row in rows)
-        if resolution:
-            rows = [row for row in rows if row["resolution"] == resolution]
+        counts = self._mcp_count_absent_timelines(rows)
+        rows = self._mcp_filter_absent_rows(rows, timeline_state, timeline_type)
         total = len(rows)
         rows = rows[offset : offset + limit]
         return {

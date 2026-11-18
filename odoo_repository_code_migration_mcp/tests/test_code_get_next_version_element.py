@@ -15,7 +15,6 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="old_name",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
         self.assertEqual(result["state"], "available")
         self.assertEqual(
             result["next"],
@@ -27,6 +26,9 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
                 "name": "new_name",
             },
         )
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(result["timeline"]["state"], "confirmed")
+        self.assertEqual(result["timeline"]["target"]["name"], "new_name")
 
     def test_next__field_same_name(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
@@ -37,10 +39,10 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="name",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
         self.assertEqual(result["state"], "available")
         self.assertEqual(result["next"]["name"], "name")
         self.assertEqual(result["next"]["version"], "18.0")
+        self.assertIsNone(result["timeline"])
 
     def test_next__method_removed(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
@@ -51,9 +53,11 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="_removed_method",
         )
         self.assertIsNone(result["error"])
-        self.assertFalse(result["found"])
         self.assertEqual(result["state"], "absent")
         self.assertIsNone(result["next"])
+        self.assertEqual(result["timeline"]["type"], "removed")
+        self.assertEqual(result["timeline"]["state"], "confirmed")
+        self.assertIsNone(result["timeline"]["target"])
 
     def test_next__draft_proposal(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
@@ -64,12 +68,12 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="draft_field",
         )
         self.assertIsNone(result["error"])
-        self.assertFalse(result["found"])
         self.assertEqual(result["state"], "absent")
         self.assertIsNone(result["next"])
-        self.assertEqual(result["proposal"]["timeline_type"], "moved")
-        self.assertEqual(result["proposal"]["next"]["name"], "draft_field_new")
-        self.assertEqual(result["proposal"]["next"]["version"], "18.0")
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(result["timeline"]["state"], "draft")
+        self.assertEqual(result["timeline"]["target"]["name"], "draft_field_new")
+        self.assertEqual(result["timeline"]["target"]["version"], "18.0")
 
     def test_next__model_renamed(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
@@ -79,10 +83,12 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="old.model",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
+        self.assertEqual(result["state"], "available")
         self.assertEqual(result["next"]["name"], "new.model")
         self.assertEqual(result["next"]["version"], "18.0")
         self.assertIsNone(result["next"]["model"])
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(result["timeline"]["target"]["name"], "new.model")
 
     def test_next__data_renamed(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
@@ -92,8 +98,12 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
             name="old_record",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
+        self.assertEqual(result["state"], "available")
         self.assertEqual(result["next"]["name"], "test_module_a.new_record")
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(
+            result["timeline"]["target"]["name"], "test_module_a.new_record"
+        )
 
     def test_next__not_found(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(

@@ -19,12 +19,11 @@ class TestCodeGetElementHistory(McpCodeMigrationCommon):
         self.assertEqual(len(history), 2)
         self.assertEqual(history[0]["name"], "old_name")
         self.assertEqual(history[0]["version"], "17.0")
-        self.assertEqual(history[0]["timeline_type"], "moved")
-        self.assertEqual(history[0]["state"], "confirmed")
+        self.assertEqual(history[0]["timeline"]["type"], "moved")
+        self.assertEqual(history[0]["timeline"]["state"], "confirmed")
         self.assertEqual(history[1]["name"], "new_name")
         self.assertEqual(history[1]["version"], "18.0")
-        self.assertIsNone(history[1]["timeline_type"])
-        self.assertIsNone(history[1]["state"])
+        self.assertIsNone(history[1]["timeline"])
 
     def test_history__from_the_newest(self):
         # Querying the newest element returns the same chain
@@ -50,8 +49,8 @@ class TestCodeGetElementHistory(McpCodeMigrationCommon):
         self.assertIsNone(result["error"])
         history = result["history"]
         self.assertEqual(len(history), 1)
-        self.assertEqual(history[0]["timeline_type"], "removed")
-        self.assertEqual(history[0]["state"], "confirmed")
+        self.assertEqual(history[0]["timeline"]["type"], "removed")
+        self.assertEqual(history[0]["timeline"]["state"], "confirmed")
 
     def test_history__model_chain(self):
         result = self.env["odoo.module.branch"]._ai_code_get_element_history(
@@ -88,7 +87,7 @@ class TestCodeGetElementHistory(McpCodeMigrationCommon):
         )
         self.assertIsNone(result["error"])
         self.assertEqual(len(result["history"]), 1)
-        self.assertIsNone(result["history"][0]["timeline_type"])
+        self.assertIsNone(result["history"][0]["timeline"])
 
     def test_history__not_found(self):
         result = self.env["odoo.module.branch"]._ai_code_get_element_history(

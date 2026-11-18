@@ -27,17 +27,15 @@ class TestCodeListAbsentElements(McpCodeMigrationCommon):
         self.assertEqual(gone_field["model"], "res.partner")
         self.assertEqual(gone_field["org"], "TestOCA")
         self.assertEqual(gone_field["repository"], "test-repo")
-        self.assertIsNone(gone_field["timeline_type"])
-        self.assertIsNone(gone_field["timeline_state"])
-        self.assertEqual(gone_field["resolution"], "uncovered")
+        self.assertIsNone(gone_field["timeline"])
         draft = by_key[("field", "draft_field")]
-        self.assertEqual(draft["timeline_type"], "moved")
-        self.assertEqual(draft["timeline_state"], "draft")
-        self.assertEqual(draft["resolution"], "draft")
+        self.assertEqual(draft["timeline"]["type"], "moved")
+        self.assertEqual(draft["timeline"]["state"], "draft")
+        self.assertEqual(draft["timeline"]["target"]["name"], "draft_field_new")
         removed = by_key[("method", "_removed_method")]
-        self.assertEqual(removed["timeline_type"], "removed")
-        self.assertEqual(removed["timeline_state"], "confirmed")
-        self.assertEqual(removed["resolution"], "removed")
+        self.assertEqual(removed["timeline"]["type"], "removed")
+        self.assertEqual(removed["timeline"]["state"], "confirmed")
+        self.assertIsNone(removed["timeline"]["target"])
         model = by_key[("model", "gone.model")]
         self.assertIsNone(model["model"])
         self.assertEqual(model["next_defined_in"], [])
@@ -47,28 +45,35 @@ class TestCodeListAbsentElements(McpCodeMigrationCommon):
         self.assertFalse(data["is_override"])
         self.assertIsNone(data["overridden_xml_id"])
 
-    def test_list__resolution_filter(self):
+    def test_list__timeline_filters(self):
         model = self.env["odoo.module.branch"]
         result = model._ai_code_list_absent_elements(
-            module="test_module_a", version="17.0", resolution="uncovered"
+            module="test_module_a", version="17.0", timeline_state="none"
         )
         self.assertEqual(result["total"], 4)
         self.assertEqual(
-            {element["resolution"] for element in result["elements"]},
-            {"uncovered"},
+            {element["timeline"] for element in result["elements"]},
+            {None},
         )
         self.assertEqual(
             result["counts"],
             {"uncovered": 4, "draft": 1, "removed": 1, "moved": 0},
         )
         result = model._ai_code_list_absent_elements(
-            module="test_module_a", version="17.0", resolution="draft"
+            module="test_module_a", version="17.0", timeline_state="draft"
         )
         self.assertEqual(result["total"], 1)
+        self.assertEqual(result["elements"][0]["timeline"]["state"], "draft")
         result = model._ai_code_list_absent_elements(
-            module="test_module_a", version="17.0", resolution="removed"
+            module="test_module_a", version="17.0", timeline_state="confirmed"
         )
         self.assertEqual(result["total"], 1)
+        self.assertEqual(result["elements"][0]["timeline"]["state"], "confirmed")
+        result = model._ai_code_list_absent_elements(
+            module="test_module_a", version="17.0", timeline_type="removed"
+        )
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["elements"][0]["timeline"]["type"], "removed")
 
     def test_list__data_classification(self):
         model = self.env["odoo.module.branch"]

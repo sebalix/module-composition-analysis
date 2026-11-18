@@ -7,7 +7,7 @@
         <field name="name">code_get_next_version_element</field>
         <field
             name="description"
-        >Get the next Odoo version counterpart of a code element (model, field, method or data record): where did it go? Move-aware (renames, replacements, cross-module and cross-model moves), following the confirmed module timelines (renames/replacements), the confirmed code timelines and the model's next version record. A draft proposal already declared for the element is reported in 'proposal' without changing 'found', 'state' or 'next', which follow confirmed timelines only.</field>
+        >Get the next Odoo version counterpart of a code element (model, field, method or data record): where did it go? Move-aware (renames, replacements, cross-module and cross-model moves), following the confirmed module timelines (renames/replacements), the confirmed code timelines and the model's next version record. The linked timeline is reported in 'timeline'; a draft timeline is reported with state='draft' while 'next' remains null.</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_code_get_next_version_element</field>
         <field name="kind">generic</field>
@@ -17,9 +17,29 @@
         <field name="name">code_get_element_history</field>
         <field
             name="description"
-        >Get the version chain of a code element: its successive names, modules, models and Odoo versions, from the oldest to the newest known version, with the timeline (move/replacement/removal) linking each step to the next one.</field>
+        >Get the timeline-linked version chain of a code element: its successive names, modules, models and Odoo versions, from the oldest to the newest known version, with the timeline (move/replacement/removal) linking each step to the next one.</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_code_get_element_history</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_get_element_lineage_tool">
+        <field name="name">code_get_element_lineage</field>
+        <field
+            name="description"
+        >Get the full version lineage of a code element, from its source version to a target version (latest known by default). The lineage follows same-name continuations, confirmed code timelines and module/model lineage, and jumps versions missing from the MCA so it reaches the nearest resolved version at or before the target. Each step contains an existing element and its outgoing timeline, if any; version jumps indicate gaps.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_code_get_element_lineage</field>
+        <field name="kind">generic</field>
+    </record>
+
+    <record model="ai.tool" id="code_get_elements_lineage_tool">
+        <field name="name">code_get_elements_lineage</field>
+        <field
+            name="description"
+        >Get the full version lineage of several code elements in one call. Each element is traced independently from its source version to the common target version; per-element errors are returned without failing the whole batch. Use it to audit the elements used by a module without one call per element.</field>
+        <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
+        <field name="function_name">_ai_code_get_elements_lineage</field>
         <field name="kind">generic</field>
     </record>
 
@@ -40,7 +60,7 @@
         <field name="name">code_list_absent_elements</field>
         <field
             name="description"
-        >List the code elements of a module that are absent from its next Odoo version: the inventory feeding the migration analysis. For each element the timeline already covering it is reported with a 'resolution' status (uncovered = to analyze and propose, draft = proposal in progress, removed = confirmed removal), together with counters before pagination. Elements whose next version is not scanned yet are excluded. Data elements expose their data_type, noupdate and is_override flags and can be filtered on them, so demo, noupdate and overriding records can be told apart from structural records; only data records loaded by the module are listed. Model elements expose the modules still defining the same model in the next version ('next_defined_in').</field>
+        >List the code elements of a module that are absent from its next Odoo version: the inventory feeding the migration analysis. For each element the timeline already covering it is reported as a 'timeline' object (null = to analyze and propose, draft = proposal in progress, removed/confirmed = already declared), together with timeline counters before pagination. Elements whose next version is not scanned yet are excluded. Data elements expose their data_type, noupdate and is_override flags and can be filtered on them, so demo, noupdate and overriding records can be told apart from structural records; only data records loaded by the module are listed. Model elements expose the modules still defining the same model in the next version ('next_defined_in').</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_code_list_absent_elements</field>
         <field name="kind">generic</field>
@@ -92,6 +112,8 @@
             eval="[
                 (4, ref('code_get_next_version_element_tool')),
                 (4, ref('code_get_element_history_tool')),
+                (4, ref('code_get_element_lineage_tool')),
+                (4, ref('code_get_elements_lineage_tool')),
                 (4, ref('code_list_timelines_tool')),
                 (4, ref('code_list_absent_elements_tool')),
                 (4, ref('code_create_timeline_tool')),

@@ -481,10 +481,11 @@ class TestCodeTimelineCrossScope(McpCodeMigrationCommon):
             name="cross_record",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
         self.assertEqual(result["state"], "available")
         self.assertEqual(result["next"]["module"], "test_module_b")
         self.assertEqual(result["next"]["name"], "test_module_b.cross_record")
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(result["timeline"]["state"], "confirmed")
 
     def test_next_version_follows_cross_model_field(self):
         result = self._create(
@@ -508,11 +509,12 @@ class TestCodeTimelineCrossScope(McpCodeMigrationCommon):
             name="cross_field",
         )
         self.assertIsNone(result["error"])
-        self.assertTrue(result["found"])
         self.assertEqual(result["state"], "available")
         self.assertEqual(result["next"]["module"], "test_module_b")
         self.assertEqual(result["next"]["model"], "cross.new")
         self.assertEqual(result["next"]["name"], "cross_field_new")
+        self.assertEqual(result["timeline"]["type"], "moved")
+        self.assertEqual(result["timeline"]["target"]["model"], "cross.new")
 
     def test_history_follows_cross_module_data(self):
         result = self._create(
@@ -536,6 +538,6 @@ class TestCodeTimelineCrossScope(McpCodeMigrationCommon):
         self.assertEqual(len(history), 2)
         self.assertEqual(history[0]["module"], "test_module_a")
         self.assertEqual(history[0]["name"], "test_module_a.cross_record")
-        self.assertEqual(history[0]["timeline_type"], "moved")
+        self.assertEqual(history[0]["timeline"]["type"], "moved")
         self.assertEqual(history[1]["module"], "test_module_b")
         self.assertEqual(history[1]["name"], "test_module_b.cross_record")

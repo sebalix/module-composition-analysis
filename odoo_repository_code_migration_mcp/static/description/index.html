@@ -376,10 +376,11 @@ Odoo MCA modules through an MCP (Model Context Protocol) server.</p>
 declared by <tt class="docutils literal">odoo_repository_mcp</tt>:</p>
 <ul class="simple">
 <li>follow an element across the Odoo versions: its next version
-counterpart, its full history and any draft proposal</li>
+counterpart, its timeline-linked history and its full lineage up to a
+target version, jumping versions missing from the MCA</li>
 <li>list the declared code renames/removals with pagination and filters</li>
-<li>list the elements absent from the next version, with their resolution
-status, resolution counters and data classification (demo, noupdate or
+<li>list the elements absent from the next version, with their timeline
+and timeline counters, plus data classification (demo, noupdate or
 overriding records); only data records loaded by the module are listed</li>
 <li>propose new renames/removals as timelines (draft by default, or
 directly confirmed for high-confidence proposals), applied to the

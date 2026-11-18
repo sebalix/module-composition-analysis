@@ -339,6 +339,29 @@ class OdooCodeTimeline(models.Model):
         )
         return data
 
+    def _mcp_to_ref(self):
+        """Convert the timeline to the shared MCP timeline reference."""
+        self.ensure_one()
+        next_element = self._get_next_element()
+        return {
+            "id": self.id,
+            "type": self.timeline_type,
+            "state": self.state,
+            "target": (next_element._mcp_to_element_dict() if next_element else None),
+        }
+
+    def _mcp_get_timeline_for_element(self, element):
+        """Return the timeline covering the given element, if any."""
+        element.ensure_one()
+        element_type = self._get_element_type(element._name)
+        return self.search(
+            [
+                ("element_type", "=", element_type),
+                (f"{element_type}_id", "=", element.id),
+            ],
+            limit=1,
+        )
+
     def _mcp_get_previous_timeline(self, element):
         """Return the confirmed timeline pointing to the given element."""
         element_type = self._get_element_type(element._name)
