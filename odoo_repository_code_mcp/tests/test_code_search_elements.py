@@ -78,6 +78,10 @@ class TestCodeSearchElements(McpCodeCommon):
         )
         self.assertEqual(result["total"], 1)
         result = model._ai_code_search_elements(
+            element_type="data", name="test_module_a.partner_test"
+        )
+        self.assertEqual(result["total"], 1)
+        result = model._ai_code_search_elements(
             element_type="model", repository="TestProject/project-repo"
         )
         self.assertEqual(result["total"], 1)

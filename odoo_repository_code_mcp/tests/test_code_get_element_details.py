@@ -78,8 +78,31 @@ class TestCodeGetElementDetails(McpCodeCommon):
         self.assertEqual(element["data_type"], "data")
         self.assertTrue(element["noupdate"])
         self.assertTrue(element["loaded"])
+        self.assertFalse(element["is_override"])
+        self.assertIsNone(element["overridden_xml_id"])
         self.assertIn("res.partner", element["data_json"])
         self.assertIn("<record", element["data_xml"])
+
+    def test_details__data_override(self):
+        self.env["odoo.module.branch.data"].create(
+            {
+                "module_branch_id": self.module_branch_a18.id,
+                "odoo_model_version_id": self.model_version_partner.id,
+                "name": "Overridden record",
+                "xml_id": "base.some_record",
+                "data_type": "data",
+            }
+        )
+        result = self.env["odoo.module.branch"]._ai_code_get_element_details(
+            element_type="data",
+            version="18.0",
+            module="test_module_a",
+            name="base.some_record",
+        )
+        self.assertIsNone(result["error"])
+        element = result["element"]
+        self.assertTrue(element["is_override"])
+        self.assertEqual(element["overridden_xml_id"], "base.some_record")
 
     def test_details__not_found(self):
         model = self.env["odoo.module.branch"]
