@@ -125,7 +125,9 @@
                 <field name="odoo_version_id" />
                 <field name="module_id" />
                 <field name="element_type" />
+                <field name="element_name" />
                 <field name="timeline_type" />
+                <field name="next_element_name" />
                 <field name="state" />
                 <field name="model_id" optional="hide" />
                 <field name="next_model_id" optional="hide" />
@@ -145,6 +147,8 @@
         <field name="type">search</field>
         <field name="arch" type="xml">
             <search>
+                <field name="element_name" />
+                <field name="next_element_name" />
                 <field name="module_branch_id" />
                 <field name="odoo_version_id" />
                 <field name="org_id" />

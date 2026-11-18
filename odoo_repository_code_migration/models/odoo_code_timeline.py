@@ -102,6 +102,18 @@ class OdooCodeTimeline(models.Model):
         string="New data",
         index=True,
     )
+    element_name = fields.Char(
+        string="Element",
+        compute="_compute_element_names",
+        store=True,
+        help="Display name of the element concerned by the timeline.",
+    )
+    next_element_name = fields.Char(
+        string="New element",
+        compute="_compute_element_names",
+        store=True,
+        help="Display name of the element replacing the current one, if any.",
+    )
     module_branch_id = fields.Many2one(
         string="Module",
         comodel_name="odoo.module.branch",
@@ -353,6 +365,23 @@ class OdooCodeTimeline(models.Model):
             rec.display_name = (
                 f"[{rec.odoo_version_id.name}] {element.display_name} > {next_name}"
             )
+
+    @api.depends(
+        "model_id",
+        "next_model_id",
+        "field_id",
+        "next_field_id",
+        "method_id",
+        "next_method_id",
+        "data_id",
+        "next_data_id",
+    )
+    def _compute_element_names(self):
+        for rec in self:
+            element = rec._get_element()
+            next_element = rec._get_next_element()
+            rec.element_name = element.display_name if element else False
+            rec.next_element_name = next_element.display_name if next_element else False
 
     def _get_previous_timelines_domain(self):
         """Domain to find the timelines to the current element."""

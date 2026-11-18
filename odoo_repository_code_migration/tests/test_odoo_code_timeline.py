@@ -118,6 +118,36 @@ class TestOdooCodeTimeline(CodeMigrationCommon):
             f"[{self.branch2.name}] {self.model_d.display_name} > removed",
         )
 
+    def test_element_names(self):
+        """The element names carry the display name of the elements."""
+        timeline = self._create_code_timeline(self.model_a, self.model_b)
+        self.assertEqual(timeline.element_name, self.model_a.display_name)
+        self.assertEqual(timeline.next_element_name, self.model_b.display_name)
+        timeline_removed = self._create_code_timeline(
+            self.model_d, timeline_type="removed"
+        )
+        self.assertEqual(timeline_removed.element_name, self.model_d.display_name)
+        self.assertFalse(timeline_removed.next_element_name)
+
+    def test_search_element_names(self):
+        """The element names are searchable."""
+        timeline = self._create_code_timeline(self.model_a, self.model_b)
+        timeline_removed = self._create_code_timeline(
+            self.model_d, timeline_type="removed"
+        )
+        timelines = self.env["odoo.code.timeline"].search(
+            [("element_name", "ilike", "model_a")]
+        )
+        self.assertEqual(timelines, timeline)
+        timelines = self.env["odoo.code.timeline"].search(
+            [("next_element_name", "ilike", "model_b")]
+        )
+        self.assertEqual(timelines, timeline)
+        timelines = self.env["odoo.code.timeline"].search(
+            [("next_element_name", "=", False)]
+        )
+        self.assertEqual(timelines, timeline_removed)
+
     def test_get_related_code_timelines(self):
         """Test _get_related_code_timelines returns all timelines in a chain.
 
