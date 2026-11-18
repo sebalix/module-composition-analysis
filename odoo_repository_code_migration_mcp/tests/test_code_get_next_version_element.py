@@ -55,6 +55,22 @@ class TestCodeGetNextVersionElement(McpCodeMigrationCommon):
         self.assertEqual(result["state"], "absent")
         self.assertIsNone(result["next"])
 
+    def test_next__draft_proposal(self):
+        result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
+            element_type="field",
+            version="17.0",
+            module="test_module_a",
+            model="res.partner",
+            name="draft_field",
+        )
+        self.assertIsNone(result["error"])
+        self.assertFalse(result["found"])
+        self.assertEqual(result["state"], "absent")
+        self.assertIsNone(result["next"])
+        self.assertEqual(result["proposal"]["timeline_type"], "moved")
+        self.assertEqual(result["proposal"]["next"]["name"], "draft_field_new")
+        self.assertEqual(result["proposal"]["next"]["version"], "18.0")
+
     def test_next__model_renamed(self):
         result = self.env["odoo.module.branch"]._ai_code_get_next_version_element(
             element_type="model",

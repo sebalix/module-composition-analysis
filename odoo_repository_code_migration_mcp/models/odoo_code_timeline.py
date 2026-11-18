@@ -62,8 +62,15 @@ class TimelineListInput(BaseModel):
     state: Literal["draft", "confirmed"] | None = Field(
         default=None, description="Filter by review state."
     )
+    timeline_type: Literal["moved", "removed"] | None = Field(
+        default=None, description="Filter by timeline type."
+    )
     repository: str | None = Field(
         default=None, description="Filter by repository ('name' or 'org/name')."
+    )
+    limit: int = Field(default=50, ge=1, description="Number of timelines to return.")
+    offset: int = Field(
+        default=0, ge=0, description="Index of the first timeline to return."
     )
 
 
@@ -71,6 +78,7 @@ class TimelineListOutput(BaseModel):
     """Output of the `code_list_timelines` tool."""
 
     error: str | None = None
+    total: int
     timelines: list[Timeline]
 
 
@@ -668,7 +676,15 @@ class OdooCodeTimeline(models.Model):
 
     @mcp_tool(TimelineListInput, TimelineListOutput)
     def _ai_code_list_timelines(
-        self, module=None, version=None, element_type=None, state=None, repository=None
+        self,
+        module=None,
+        version=None,
+        element_type=None,
+        state=None,
+        timeline_type=None,
+        repository=None,
+        limit=None,
+        offset=None,
     ):
         """List the code element moves/replacements/removals."""
         module_branch_model = self.env["odoo.module.branch"]
@@ -689,6 +705,8 @@ class OdooCodeTimeline(models.Model):
             domain.append(("element_type", "=", element_type))
         if state:
             domain.append(("state", "=", state))
+        if timeline_type:
+            domain.append(("timeline_type", "=", timeline_type))
         if repository:
             domain.append(
                 (
@@ -697,8 +715,12 @@ class OdooCodeTimeline(models.Model):
                     module_branch_model._mcp_get_repository(repository).id,
                 )
             )
-        timelines = self.search(domain)
-        return {"timelines": [timeline._mcp_to_dict() for timeline in timelines]}
+        total = self.search_count(domain)
+        timelines = self.search(domain, limit=limit, offset=offset)
+        return {
+            "total": total,
+            "timelines": [timeline._mcp_to_dict() for timeline in timelines],
+        }
 
     @mcp_tool(TimelineCreateInput, TimelineOutput)
     def _ai_code_create_timeline(

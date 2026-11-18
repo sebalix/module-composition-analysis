@@ -9,6 +9,7 @@ class TestCodeListTimelines(McpCodeMigrationCommon):
     def test_list(self):
         result = self.env["odoo.code.timeline"]._ai_code_list_timelines()
         self.assertIsNone(result["error"])
+        self.assertEqual(result["total"], 5)
         self.assertEqual(len(result["timelines"]), 5)
         by_name = {
             (timeline["element_type"], timeline["name"]): timeline
@@ -44,9 +45,27 @@ class TestCodeListTimelines(McpCodeMigrationCommon):
         result = model._ai_code_list_timelines(repository="TestProject/project-repo")
         self.assertEqual(result["timelines"], [])
 
+    def test_list__pagination(self):
+        model = self.env["odoo.code.timeline"]
+        result = model._ai_code_list_timelines(limit=2)
+        self.assertEqual(result["total"], 5)
+        self.assertEqual(len(result["timelines"]), 2)
+        result = model._ai_code_list_timelines(limit=2, offset=4)
+        self.assertEqual(result["total"], 5)
+        self.assertEqual(len(result["timelines"]), 1)
+
+    def test_list__timeline_type(self):
+        model = self.env["odoo.code.timeline"]
+        result = model._ai_code_list_timelines(timeline_type="moved")
+        self.assertEqual(result["total"], 4)
+        result = model._ai_code_list_timelines(timeline_type="removed")
+        self.assertEqual(result["total"], 1)
+
     def test_list__invalid_params(self):
         model = self.env["odoo.code.timeline"]
         result = model._ai_code_list_timelines(state="published")
+        self.assertIsNotNone(result["error"])
+        result = model._ai_code_list_timelines(limit=0)
         self.assertIsNotNone(result["error"])
         result = model._ai_code_list_timelines(module="unknown_module")
         self.assertIsNotNone(result["error"])

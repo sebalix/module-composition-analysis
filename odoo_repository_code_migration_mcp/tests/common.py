@@ -78,6 +78,7 @@ class McpCodeMigrationCommon(TransactionCase):
             "name": name,
             "xml_id": xml_id,
             "data_type": "data",
+            "loaded": True,
         }
         vals.update(values)
         return cls.env["odoo.module.branch.data"].create(vals)
