@@ -12,11 +12,13 @@
         />
         <field name="arch" type="xml">
             <field name="root_id" position="after">
+                <field name="next_version_state" />
                 <field
                     name="next_odoo_version_method_id"
                     invisible="not next_odoo_version_method_id"
                 />
-                <field name="next_version_state" />
+                <field name="timeline_id" />
+                <field name="model_timeline_id" invisible="not model_timeline_id" />
             </field>
         </field>
     </record>

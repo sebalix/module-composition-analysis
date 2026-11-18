@@ -14,6 +14,25 @@ class OdooModuleBranchData(models.Model):
         compute="_compute_next_odoo_version_data_id",
         string="Next Odoo Version Data",
     )
+    timeline_ids = fields.One2many(
+        comodel_name="odoo.code.timeline",
+        inverse_name="data_id",
+        string="Timelines",
+    )
+    timeline_id = fields.Many2one(
+        comodel_name="odoo.code.timeline",
+        string="Timeline",
+        compute="_compute_timeline_id",
+        help="Confirmed timeline declaring what this element became in the next "
+        "version.",
+    )
+
+    @api.depends("timeline_ids.state")
+    def _compute_timeline_id(self):
+        for rec in self:
+            rec.timeline_id = rec.timeline_ids.filtered(
+                lambda timeline: timeline.state == "confirmed"
+            )[:1]
 
     def _get_next_version_identity_domain(self):
         """Domain matching the same data in the next module branch."""

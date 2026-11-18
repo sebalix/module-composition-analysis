@@ -2,12 +2,32 @@
 # @author Sébastien Alix <sebastien.alix@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl)
 
-from odoo import models
+from odoo import api, fields, models
 
 
 class OdooModuleBranchModel(models.Model):
     _name = "odoo.module.branch.model"
     _inherit = ["odoo.module.branch.model", "odoo.code.element.mixin"]
+
+    timeline_ids = fields.One2many(
+        comodel_name="odoo.code.timeline",
+        inverse_name="model_id",
+        string="Timelines",
+    )
+    timeline_id = fields.Many2one(
+        comodel_name="odoo.code.timeline",
+        string="Timeline",
+        compute="_compute_timeline_id",
+        help="Confirmed timeline declaring what this element became in the next "
+        "version.",
+    )
+
+    @api.depends("timeline_ids.state")
+    def _compute_timeline_id(self):
+        for rec in self:
+            rec.timeline_id = rec.timeline_ids.filtered(
+                lambda timeline: timeline.state == "confirmed"
+            )[:1]
 
     def _get_next_version_identity_domain(self):
         """Domain matching the same model in the next module branch."""

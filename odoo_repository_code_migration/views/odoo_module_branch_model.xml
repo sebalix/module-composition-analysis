@@ -13,6 +13,7 @@
         <field name="arch" type="xml">
             <field name="global_dependency_level" position="after">
                 <field name="next_version_state" />
+                <field name="timeline_id" />
             </field>
         </field>
     </record>
