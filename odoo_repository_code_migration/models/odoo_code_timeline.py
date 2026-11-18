@@ -31,15 +31,17 @@ class OdooCodeTimeline(models.Model):
     timeline_type = fields.Selection(
         string="Type",
         selection=[
-            ("renamed", "has been renamed to"),
+            ("moved", "has been moved (renamed or replaced)"),
             ("removed", "has been removed"),
         ],
-        default="renamed",
+        default="moved",
         required=True,
         index=True,
         help=(
-            "Renamed: the element exists in the next version of the module "
-            "under another name\n"
+            "Moved: the element exists in the next version of the module "
+            "under another name, or has been replaced by another element "
+            "(e.g. a Char field turned into a Many2one while keeping the "
+            "same semantics)\n"
             "Removed: the element no longer exists in the next version of "
             "the module"
         ),
@@ -203,7 +205,7 @@ class OdooCodeTimeline(models.Model):
                 raise ValidationError(
                     _("The element concerned by the timeline is missing.")
                 )
-            if rec.timeline_type == "renamed" and not next_element:
+            if rec.timeline_type == "moved" and not next_element:
                 raise ValidationError(
                     _("A new element is required when the element is renamed.")
                 )
@@ -211,7 +213,7 @@ class OdooCodeTimeline(models.Model):
                 raise ValidationError(
                     _("No new element is expected when the element is removed.")
                 )
-            if rec.timeline_type == "renamed":
+            if rec.timeline_type == "moved":
                 # The new element is the next version incarnation of the
                 # element: it must belong to a later Odoo version
                 if (

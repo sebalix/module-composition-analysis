@@ -70,14 +70,14 @@ class TestOdooCodeTimeline(CodeMigrationCommon):
         # Invalid: missing element
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
             self.env["odoo.code.timeline"].create(
-                {"element_type": "model", "timeline_type": "renamed"}
+                {"element_type": "model", "timeline_type": "moved"}
             )
         # Invalid: renamed without new element
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
             self.env["odoo.code.timeline"].create(
                 {
                     "element_type": "model",
-                    "timeline_type": "renamed",
+                    "timeline_type": "moved",
                     "model_id": self.model_e.id,
                 }
             )
@@ -96,7 +96,7 @@ class TestOdooCodeTimeline(CodeMigrationCommon):
             self.env["odoo.code.timeline"].create(
                 {
                     "element_type": "data",
-                    "timeline_type": "renamed",
+                    "timeline_type": "moved",
                     "model_id": self.model_e.id,
                     "next_model_id": self.model_c.id,
                 }
