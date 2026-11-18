@@ -7,7 +7,7 @@
         <field name="name">code_search_elements</field>
         <field
             name="description"
-        >Search the code elements collected from the scanned repositories: models, fields, methods and data records. Filters can be combined; results are paginated.</field>
+        >Search the code elements collected from the scanned repositories: models, fields, methods and data records. Filters can be combined; results are paginated. For data elements, the name filter matches the display name, the local XML ID and the full XML ID.</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_code_search_elements</field>
         <field name="kind">generic</field>
@@ -17,7 +17,7 @@
         <field name="name">code_get_element_details</field>
         <field
             name="description"
-        >Get the full details of a code element: a model returns its fields, methods and inherited models; a field returns its type and code; a method returns its signature and code; a data record returns its JSON data and XML source.</field>
+        >Get the full details of a code element: a model returns its fields, methods and inherited models; a field returns its type and code; a method returns its signature and code; a data record returns its JSON data and XML source, and whether it overrides a record of another module.</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_code_get_element_details</field>
         <field name="kind">generic</field>

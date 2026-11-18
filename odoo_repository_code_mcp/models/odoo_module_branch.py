@@ -88,7 +88,11 @@ class ElementSearchInput(BaseModel):
         ),
     )
     name: str | None = Field(
-        default=None, description="Element name (searched with 'ilike')."
+        default=None,
+        description=(
+            "Element name (searched with 'ilike'). For data elements, the "
+            "display name, the local XML ID and the full XML ID are searched."
+        ),
     )
     repository: str | None = Field(
         default=None, description="Filter by repository ('name' or 'org/name')."
@@ -176,6 +180,20 @@ class ElementDetails(BaseModel):
     loaded: bool | None = Field(
         default=None, description="Whether the data is loaded by the module."
     )
+    is_override: bool | None = Field(
+        default=None,
+        description=(
+            "Whether the data record overrides a record of another module "
+            "(for data elements)."
+        ),
+    )
+    overridden_xml_id: NullableStr = Field(
+        default=None,
+        description=(
+            "XML ID of the overridden record when 'is_override' is true "
+            "(for data elements)."
+        ),
+    )
     data_json: NullableStr = Field(
         default=None, description="JSON data of the record (for data elements)."
     )
@@ -252,7 +270,15 @@ class OdooModuleBranch(models.Model):
             if element_type == "model":
                 domain.append(("odoo_model_name", "ilike", name))
             elif element_type == "data":
-                domain.extend(["|", ("name", "ilike", name), ("xml_id", "ilike", name)])
+                domain.extend(
+                    [
+                        "|",
+                        "|",
+                        ("name", "ilike", name),
+                        ("xml_id", "ilike", name),
+                        ("full_xml_id", "ilike", name),
+                    ]
+                )
             else:
                 domain.append(("name", "ilike", name))
         return domain

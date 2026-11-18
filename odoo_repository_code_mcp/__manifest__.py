@@ -4,7 +4,7 @@
 {
     "name": "Odoo MCA Code MCP",
     "summary": "Expose the modules code elements through an MCP server.",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "development_status": "Alpha",
     "category": "Tools",
     "author": "Akretion, Odoo Community Association (OCA)",

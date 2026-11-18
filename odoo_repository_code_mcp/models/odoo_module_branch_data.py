@@ -38,6 +38,8 @@ class OdooModuleBranchData(models.Model):
             "data_type": self.data_type,
             "noupdate": self.noupdate,
             "loaded": self.loaded,
+            "is_override": self.is_override,
+            "overridden_xml_id": self.xml_id if self.is_override else None,
             "data_json": self.data_json,
             "data_xml": self.data_xml,
         }
