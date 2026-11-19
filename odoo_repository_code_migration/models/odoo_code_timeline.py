@@ -31,8 +31,8 @@ class OdooCodeTimeline(models.Model):
     timeline_type = fields.Selection(
         string="Type",
         selection=[
-            ("moved", "has been moved (renamed or replaced)"),
-            ("removed", "has been removed"),
+            ("moved", "moved to"),
+            ("removed", "removed"),
         ],
         default="moved",
         required=True,
