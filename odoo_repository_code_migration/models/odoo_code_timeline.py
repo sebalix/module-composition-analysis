@@ -333,6 +333,8 @@ class OdooCodeTimeline(models.Model):
     def _get_element(self):
         """Return the element concerned by the timeline."""
         self.ensure_one()
+        if self.element_type not in self._ELEMENT_COMODELS:
+            return self.env["odoo.module.branch.model"].browse()
         return self.model_id or self.field_id or self.method_id or self.data_id
 
     def _get_next_element(self):
@@ -340,14 +342,19 @@ class OdooCodeTimeline(models.Model):
         self.ensure_one()
         # The next element is always of the same type as the current one
         # (an empty recordset of the right model when there is none)
+        comodel = self._ELEMENT_COMODELS.get(self.element_type)
+        if not comodel:
+            return self.env["odoo.module.branch.model"].browse()
         return self[f"next_{self.element_type}_id"]
 
-    @api.depends("model_id", "field_id", "method_id", "data_id")
+    @api.depends("element_type", "model_id", "field_id", "method_id", "data_id")
     def _compute_module_branch_id(self):
         for rec in self:
-            rec.module_branch_id = rec._get_element().module_branch_id
+            element = rec._get_element()
+            rec.module_branch_id = element.module_branch_id if element else False
 
     @api.depends(
+        "element_type",
         "odoo_version_id",
         "timeline_type",
         "model_id.display_name",
@@ -362,6 +369,9 @@ class OdooCodeTimeline(models.Model):
     def _compute_display_name(self):
         for rec in self:
             element = rec._get_element()
+            if not element:
+                rec.display_name = _("New code timeline")
+                continue
             next_element = rec._get_next_element()
             next_name = next_element.display_name if next_element else _("removed")
             rec.display_name = (
@@ -369,6 +379,7 @@ class OdooCodeTimeline(models.Model):
             )
 
     @api.depends(
+        "element_type",
         "model_id",
         "next_model_id",
         "field_id",
@@ -381,6 +392,9 @@ class OdooCodeTimeline(models.Model):
     def _compute_element_names(self):
         for rec in self:
             element = rec._get_element()
+            if not element:
+                rec.element_name = rec.next_element_name = False
+                continue
             next_element = rec._get_next_element()
             rec.element_name = element.display_name if element else False
             rec.next_element_name = next_element.display_name if next_element else False
