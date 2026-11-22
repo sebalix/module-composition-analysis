@@ -376,10 +376,10 @@ through an MCP (Model Context Protocol) server.</p>
 <tt class="docutils literal">odoo_repository_mcp</tt>:</p>
 <ul class="simple">
 <li>get the migration status and the scan data of a module</li>
-<li>list the declared module renames/replacements</li>
-<li>propose new renames/replacements as timelines (draft by default, or
-directly confirmed for high-confidence proposals), applied to the
-migration analysis once confirmed</li>
+<li>list the declared module renames/replacements/removals</li>
+<li>propose new renames/replacements/removals as timelines (draft by
+default, or directly confirmed for high-confidence proposals), applied
+to the migration analysis once confirmed</li>
 </ul>
 <div class="admonition important">
 <p class="first admonition-title">Important</p>
@@ -416,6 +416,9 @@ the migration analysis.</p>
 accept a <tt class="docutils literal">confirm</tt> input to create or confirm a timeline directly:
 reserve it to high-confidence proposals, as a confirmed timeline
 immediately impacts the migration analysis.</p>
+<p>A module that disappeared without any successor is declared with
+<tt class="docutils literal"><span class="pre">timeline_type=&quot;removed&quot;</span></tt> and no <tt class="docutils literal">new_module</tt>: its migration status
+becomes <tt class="docutils literal">removed</tt> instead of <tt class="docutils literal">migrate</tt>.</p>
 <p>To allow a client to propose timelines, add its user to the
 <tt class="docutils literal">Migration Timeline Editor</tt> group
 (<tt class="docutils literal">odoo_repository_migration_mcp.group_migration_timeline_editor</tt>).

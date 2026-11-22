@@ -7,7 +7,7 @@
         <field name="name">migration_get_module_status</field>
         <field
             name="description"
-        >Get the migration status of a module for the known migration paths: status (fully_ported, migrate, port_commits, review_migration, replaced, moved_to_standard, moved_to_oca, moved_to_generic), the module it has been renamed to or replaced by, the last scanned commits and the PR url if any.</field>
+        >Get the migration status of a module for the known migration paths: status (fully_ported, migrate, port_commits, review_migration, replaced, removed, moved_to_standard, moved_to_oca, moved_to_generic), the module it has been renamed to or replaced by, the last scanned commits and the PR url if any.</field>
         <field name="model_id" ref="odoo_repository.model_odoo_module_branch" />
         <field name="function_name">_ai_migration_get_module_status</field>
         <field name="kind">generic</field>
@@ -17,7 +17,7 @@
         <field name="name">migration_list_timelines</field>
         <field
             name="description"
-        >List the module renames/replacements declared in the database, with their review state: draft timelines are proposals pending review, not applied to the migration analysis yet.</field>
+        >List the module renames/replacements/removals declared in the database, with their review state: draft timelines are proposals pending review, not applied to the migration analysis yet. A 'removed' timeline has no new module.</field>
         <field
             name="model_id"
             ref="odoo_repository_migration.model_odoo_module_branch_timeline"
@@ -40,7 +40,7 @@
         <field name="name">migration_create_timeline</field>
         <field
             name="description"
-        >Declare that a module has been renamed or replaced by another one, starting from the next Odoo version. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. The proposal is created as a draft timeline by default; set 'confirm' to true to create it directly as confirmed (high-confidence proposals only: it immediately impacts the migration analysis). The 'note' should document the sources of truth justifying it (e.g. the GitHub commit URL, the OpenUpgrade migration script URL): a source of truth URL is mandatory to confirm.</field>
+        >Declare that a module has been renamed, replaced by another one or removed, starting from the next Odoo version. Omit 'new_module' and set 'timeline_type' to 'removed' when the module disappeared without any successor; 'new_module' is required for 'renamed' and 'replaced' timelines. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. The proposal is created as a draft timeline by default; set 'confirm' to true to create it directly as confirmed (high-confidence proposals only: it immediately impacts the migration analysis). The 'note' should document the sources of truth justifying it (e.g. the GitHub commit URL, the OpenUpgrade migration script URL): a source of truth URL is mandatory to confirm.</field>
         <field
             name="model_id"
             ref="odoo_repository_migration.model_odoo_module_branch_timeline"
@@ -53,7 +53,7 @@
         <field name="name">migration_update_timeline</field>
         <field
             name="description"
-        >Update a draft timeline proposal (new module, type or note). The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. Set 'confirm' to true to confirm it once the proposal reaches high confidence (a confirmed timeline immediately impacts the migration analysis, and a source of truth URL is required in 'note'). A confirmed timeline can only have its note updated, and the new note must carry a source URL; semantic fields cannot be modified.</field>
+        >Update a draft timeline proposal (new module, type or note). Set 'timeline_type' to 'removed' to declare that the module disappeared without any successor: this clears its new module; switching back to 'renamed' or 'replaced' requires a 'new_module'. The 'note' is HTML: start with the confidence tag, then end with a bulleted Source section, one full URL per link (commit first); do not use Markdown. Set 'confirm' to true to confirm it once the proposal reaches high confidence (a confirmed timeline immediately impacts the migration analysis, and a source of truth URL is required in 'note'). A confirmed timeline can only have its note updated, and the new note must carry a source URL; semantic fields cannot be modified.</field>
         <field
             name="model_id"
             ref="odoo_repository_migration.model_odoo_module_branch_timeline"

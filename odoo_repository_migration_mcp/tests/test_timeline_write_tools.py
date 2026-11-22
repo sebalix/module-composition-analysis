@@ -75,6 +75,36 @@ class TestTimelineWriteTools(McpMigrationCommon):
         self.assertIsNone(result["error"])
         self.assertEqual(result["timeline"]["timeline_type"], "replaced")
 
+    def test_migration_create_timeline__removed(self):
+        result = self.env["odoo.module.branch.timeline"]._ai_migration_create_timeline(
+            module="test_module_b",
+            version="18.0",
+            timeline_type="removed",
+        )
+        self.assertIsNone(result["error"])
+        timeline = result["timeline"]
+        self.assertEqual(timeline["timeline_type"], "removed")
+        self.assertIsNone(timeline["new_module"])
+        self.assertEqual(timeline["state"], "draft")
+
+    def test_migration_create_timeline__removed_with_new_module(self):
+        result = self.env["odoo.module.branch.timeline"]._ai_migration_create_timeline(
+            module="test_module_b",
+            version="18.0",
+            new_module="test_module_c",
+            timeline_type="removed",
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("no successor", result["error"])
+
+    def test_migration_create_timeline__missing_new_module(self):
+        result = self.env["odoo.module.branch.timeline"]._ai_migration_create_timeline(
+            module="test_module_b",
+            version="18.0",
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("new module is required", result["error"].lower())
+
     def test_migration_create_timeline__confirmed(self):
         timeline_model = self.env["odoo.module.branch.timeline"]
         result = timeline_model._ai_migration_create_timeline(
@@ -199,6 +229,50 @@ class TestTimelineWriteTools(McpMigrationCommon):
         self.assertIn("Updated note.", timeline["note"])
         self.assertIn("<p>", timeline["note"])
         self.assertEqual(timeline["state"], "draft")
+
+    def test_migration_update_timeline__removed(self):
+        timeline_model = self.env["odoo.module.branch.timeline"]
+        # Turn the draft rename into a removal: the new module is cleared
+        result = timeline_model._ai_migration_update_timeline(
+            module="test_module_a",
+            version="17.0",
+            timeline_type="removed",
+            repository="TestOCA/test-repo",
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(result["timeline"]["timeline_type"], "removed")
+        self.assertIsNone(result["timeline"]["new_module"])
+        self.assertFalse(self.timeline_draft.next_module_id)
+        # The removal cannot target a new module
+        result = timeline_model._ai_migration_update_timeline(
+            module="test_module_a",
+            version="17.0",
+            new_module="test_module_b",
+            repository="TestOCA/test-repo",
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("no successor", result["error"])
+        # Switching back to a rename requires a new module
+        result = timeline_model._ai_migration_update_timeline(
+            module="test_module_a",
+            version="17.0",
+            timeline_type="renamed",
+            repository="TestOCA/test-repo",
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("new module is required", result["error"].lower())
+        # Providing both is accepted
+        result = timeline_model._ai_migration_update_timeline(
+            module="test_module_a",
+            version="17.0",
+            new_module="test_module_b",
+            timeline_type="renamed",
+            repository="TestOCA/test-repo",
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(result["timeline"]["timeline_type"], "renamed")
+        self.assertEqual(result["timeline"]["new_module"], "test_module_b")
+        self.assertEqual(self.timeline_draft.next_module_id, self.module_b)
 
     def test_migration_update_timeline__confirmed(self):
         timeline_model = self.env["odoo.module.branch.timeline"]

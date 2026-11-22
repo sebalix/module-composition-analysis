@@ -10,6 +10,10 @@ them in the UI before they impact the migration analysis.
 high-confidence proposals, as a confirmed timeline immediately impacts the
 migration analysis.
 
+A module that disappeared without any successor is declared with
+`timeline_type="removed"` and no `new_module`: its migration status becomes
+`removed` instead of `migrate`.
+
 To allow a client to propose timelines, add its user to the
 `Migration Timeline Editor` group
 (`odoo_repository_migration_mcp.group_migration_timeline_editor`).

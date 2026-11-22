@@ -63,6 +63,25 @@ class TestMigrationReadTools(McpMigrationCommon):
         result = self.env["odoo.module.branch"]._ai_migration_get_module_status()
         self.assertIsNotNone(result["error"])
 
+    def test_migration_get_module_status__removed(self):
+        self.env["odoo.module.branch.timeline"].create(
+            {
+                "module_branch_id": self.module_branch_b17.id,
+                "timeline_type": "removed",
+                "state": "confirmed",
+            }
+        )
+        result = self.env["odoo.module.branch"]._ai_migration_get_module_status(
+            module="test_module_b"
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(len(result["migrations"]), 1)
+        migration = result["migrations"][0]
+        self.assertEqual(migration["status"], "removed")
+        self.assertFalse(migration["renamed_to"])
+        self.assertFalse(migration["replaced_by"])
+        self.assertIsNone(migration["pr_url"])
+
     def test_migration_get_data(self):
         result = self.env["odoo.module.branch"]._ai_migration_get_data(
             module="test_module_a",
@@ -154,6 +173,22 @@ class TestMigrationReadTools(McpMigrationCommon):
             repository="TestProject/project-repo"
         )
         self.assertEqual(result["timelines"], [])
+
+    def test_migration_list_timelines__removed(self):
+        self.env["odoo.module.branch.timeline"].create(
+            {
+                "module_branch_id": self.module_branch_b18.id,
+                "timeline_type": "removed",
+            }
+        )
+        result = self.env["odoo.module.branch.timeline"]._ai_migration_list_timelines(
+            module="test_module_b"
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(len(result["timelines"]), 1)
+        timeline = result["timelines"][0]
+        self.assertEqual(timeline["timeline_type"], "removed")
+        self.assertIsNone(timeline["new_module"])
 
     def test_migration_list_timelines__invalid_params(self):
         model = self.env["odoo.module.branch.timeline"]

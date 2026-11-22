@@ -35,10 +35,10 @@ This module adds the migration tools to the MCP server declared by
 ``odoo_repository_mcp``:
 
 - get the migration status and the scan data of a module
-- list the declared module renames/replacements
-- propose new renames/replacements as timelines (draft by default, or
-  directly confirmed for high-confidence proposals), applied to the
-  migration analysis once confirmed
+- list the declared module renames/replacements/removals
+- propose new renames/replacements/removals as timelines (draft by
+  default, or directly confirmed for high-confidence proposals), applied
+  to the migration analysis once confirmed
 
 .. IMPORTANT::
    This is an alpha version, the data model and design can change at any time without warning.
@@ -66,6 +66,10 @@ the migration analysis.
 accept a ``confirm`` input to create or confirm a timeline directly:
 reserve it to high-confidence proposals, as a confirmed timeline
 immediately impacts the migration analysis.
+
+A module that disappeared without any successor is declared with
+``timeline_type="removed"`` and no ``new_module``: its migration status
+becomes ``removed`` instead of ``migrate``.
 
 To allow a client to propose timelines, add its user to the
 ``Migration Timeline Editor`` group

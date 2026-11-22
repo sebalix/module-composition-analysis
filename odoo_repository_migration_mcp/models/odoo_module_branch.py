@@ -17,8 +17,8 @@ class MigrationStatus(BaseModel):
     status: str = Field(
         description=(
             "Migration status: fully_ported, migrate, port_commits, "
-            "review_migration, replaced, moved_to_standard, moved_to_oca "
-            "or moved_to_generic."
+            "review_migration, replaced, removed, moved_to_standard, "
+            "moved_to_oca or moved_to_generic."
         )
     )
     renamed_to: NullableStr = None

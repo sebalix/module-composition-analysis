@@ -16,18 +16,23 @@ from odoo.addons.odoo_repository_mcp.utils import (
 
 
 class Timeline(BaseModel):
-    """Timeline (rename/replacement proposal) of a module."""
+    """Timeline (rename/replacement/removal proposal) of a module."""
 
     id: int
     module: str = Field(description="Module technical name.")
     version: str = Field(description="Odoo version of the source module branch.")
-    timeline_type: str = Field(description="'renamed' or 'replaced'.")
+    timeline_type: str = Field(description="'renamed', 'replaced' or 'removed'.")
     state: str = Field(description="Review state: 'draft' or 'confirmed'.")
-    new_module: str = Field(description="New module technical name.")
+    new_module: NullableStr = Field(
+        default=None,
+        description=(
+            "New module technical name ('removed' timelines have no new module)."
+        ),
+    )
     starting_version: NullableStr = None
     note: NullableStr = Field(
         default=None,
-        description="HTML note explaining the module move/replacement.",
+        description="HTML note explaining the module move/replacement/removal.",
     )
 
 
@@ -58,9 +63,19 @@ class TimelineCreateInput(BaseModel):
 
     module: str = Field(description="Module technical name.")
     version: str = Field(description="Odoo version of the source module branch.")
-    new_module: str = Field(description="Technical name of the new module.")
-    timeline_type: Literal["renamed", "replaced"] | None = Field(
-        default=None, description="'renamed' (default) or 'replaced'."
+    new_module: str | None = Field(
+        default=None,
+        description=(
+            "Technical name of the new module. Required for 'renamed' and "
+            "'replaced' timelines, forbidden for 'removed' ones."
+        ),
+    )
+    timeline_type: Literal["renamed", "replaced", "removed"] | None = Field(
+        default=None,
+        description=(
+            "'renamed' (default), 'replaced', or 'removed' when the module "
+            "disappeared without any successor."
+        ),
     )
     note: str | None = Field(
         default=None,
@@ -113,10 +128,19 @@ class TimelineUpdateInput(BaseModel):
     module: str = Field(description="Module technical name.")
     version: str = Field(description="Odoo version of the source module branch.")
     new_module: str | None = Field(
-        default=None, description="New technical name of the module."
+        default=None,
+        description=(
+            "New technical name of the module. Required to turn a 'removed' "
+            "timeline into a 'renamed' or 'replaced' one, forbidden for "
+            "'removed' timelines."
+        ),
     )
-    timeline_type: Literal["renamed", "replaced"] | None = Field(
-        default=None, description="New type of the timeline."
+    timeline_type: Literal["renamed", "replaced", "removed"] | None = Field(
+        default=None,
+        description=(
+            "New type of the timeline: 'renamed', 'replaced', or 'removed' "
+            "when the module disappeared without any successor."
+        ),
     )
     note: str | None = Field(
         default=None,
@@ -289,11 +313,13 @@ class OdooModuleBranchTimeline(models.Model):
         confirm=None,
         repository=None,
     ):
-        """Declare a module rename/replacement, as a draft or confirmed timeline.
+        """Declare a module rename/replacement/removal, as a draft or confirmed
+        timeline.
 
-        Set 'confirm' to true for a high-confidence rename/replacement with a
-        source-of-truth URL in 'note': a confirmed module timeline immediately
-        activates the module lineage used by the code absent-elements workflow.
+        Set 'confirm' to true for a high-confidence rename/replacement/removal
+        with a source-of-truth URL in 'note': a confirmed module timeline
+        immediately activates the module lineage used by the code
+        absent-elements workflow.
         """
         module_branch_model = self.env["odoo.module.branch"]
         module_branch = self._mcp_get_module_branch(
@@ -305,13 +331,27 @@ class OdooModuleBranchTimeline(models.Model):
                 f"A timeline already exists for module '{module}' on "
                 f"version '{version}'."
             )
+        timeline_type = timeline_type or "renamed"
+        if timeline_type == "removed":
+            if new_module is not None:
+                raise ValueError(
+                    "A removed timeline cannot target a new module: it has "
+                    "no successor."
+                )
+            next_module_id = False
+        else:
+            if not new_module:
+                raise ValueError(
+                    f"A new module is required for a '{timeline_type}' timeline."
+                )
+            next_module_id = module_branch_model._mcp_get_module(new_module).id
         if confirm:
             check_source_of_truth(note)
         timeline = self.create(
             {
                 "module_branch_id": module_branch.id,
-                "next_module_id": module_branch_model._mcp_get_module(new_module).id,
-                "timeline_type": timeline_type or "renamed",
+                "next_module_id": next_module_id,
+                "timeline_type": timeline_type,
                 "note": note or False,
                 # Proposal only by default: applied to the analysis once
                 # confirmed (by a human, or directly for a high-confidence
@@ -359,7 +399,9 @@ class OdooModuleBranchTimeline(models.Model):
         """Update or confirm a draft module timeline proposal.
 
         The note is HTML; on a confirmed timeline only the note can be
-        updated, and it must carry a source URL.
+        updated, and it must carry a source URL. Changing the type to
+        'removed' clears the new module; switching back to 'renamed' or
+        'replaced' requires a new module.
         """
         timeline = self._mcp_get_timeline(module, version, repository)
         if timeline.state != "draft":
@@ -367,11 +409,25 @@ class OdooModuleBranchTimeline(models.Model):
                 timeline, new_module, timeline_type, note, confirm
             )
         values = {}
-        if new_module is not None:
+        final_type = timeline_type or timeline.timeline_type
+        if final_type == "removed":
+            if new_module is not None:
+                raise ValueError(
+                    "A removed timeline cannot target a new module: it has "
+                    "no successor."
+                )
+            if timeline.timeline_type != "removed":
+                values["next_module_id"] = False
+        elif new_module is not None:
             if new_module == module:
                 raise ValueError("The new module must be different from the module.")
             values["next_module_id"] = (
                 self.env["odoo.module.branch"]._mcp_get_module(new_module).id
+            )
+        elif not timeline.next_module_id:
+            raise ValueError(
+                f"A new module is required for a '{final_type}' timeline: "
+                "provide 'new_module'."
             )
         if timeline_type is not None:
             values["timeline_type"] = timeline_type
