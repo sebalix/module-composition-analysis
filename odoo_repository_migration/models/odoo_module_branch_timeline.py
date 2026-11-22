@@ -11,7 +11,7 @@ from odoo.exceptions import ValidationError
 
 class OdooModuleBranchTimeline(models.Model):
     _name = "odoo.module.branch.timeline"
-    _description = "Odoo Module Timeline (renaming/replacement)"
+    _description = "Odoo Module Timeline (renaming/replacement/removal)"
     _order = "odoo_version_sequence"
 
     module_branch_id = fields.Many2one(
@@ -53,6 +53,7 @@ class OdooModuleBranchTimeline(models.Model):
         selection=[
             ("renamed", "has been renamed to"),
             ("replaced", "has been replaced by"),
+            ("removed", "has been removed"),
         ],
         default="renamed",
         required=True,
@@ -61,7 +62,8 @@ class OdooModuleBranchTimeline(models.Model):
             "Renamed: modules still share the same Git history (it allows to "
             "check commits that could be ported)\n"
             "Replaced: module has been replaced (or merged) by another one that "
-            "fulfill the same feature"
+            "fulfill the same feature\n"
+            "Removed: module has been removed without any successor"
         ),
     )
     state = fields.Selection(
@@ -116,9 +118,15 @@ class OdooModuleBranchTimeline(models.Model):
         "active",
     }
 
-    @api.constrains("module_branch_id", "next_module_id")
+    @api.constrains("module_branch_id", "next_module_id", "timeline_type")
     def _check_next_module(self):
         for rec in self:
+            if rec.timeline_type == "removed":
+                if rec.next_module_id:
+                    raise ValidationError(
+                        _("A removed module cannot have a new module.")
+                    )
+                continue
             if not rec.next_module_id:
                 raise ValidationError(_("A new module is required."))
             if rec.next_module_id == rec.module_branch_id.module_id:
@@ -126,13 +134,25 @@ class OdooModuleBranchTimeline(models.Model):
                     _("The new module must be different from the module.")
                 )
 
+    @api.onchange("timeline_type")
+    def _onchange_timeline_type(self):
+        if self.timeline_type == "removed":
+            self.next_module_id = False
+
     @api.depends("odoo_version_id", "module_branch_id", "next_module_id")
     def _compute_display_name(self):
         for rec in self:
-            rec.display_name = (
-                f"[{rec.odoo_version_id.name}] "
-                f"{rec.module_branch_id.module_id.name} > {rec.next_module_id.name}"
-            )
+            if rec.next_module_id:
+                rec.display_name = (
+                    f"[{rec.odoo_version_id.name}] "
+                    f"{rec.module_branch_id.module_id.name} > "
+                    f"{rec.next_module_id.name}"
+                )
+            else:
+                rec.display_name = (
+                    f"[{rec.odoo_version_id.name}] "
+                    f"{rec.module_branch_id.module_id.name} (removed)"
+                )
 
     @api.depends("module_branch_id")
     def _compute_last_known_module_branch_id(self):

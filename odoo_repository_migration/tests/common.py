@@ -80,8 +80,9 @@ class MigrationCommon(common.Common):
         vals = {
             "module_branch_id": module_branch.id,
             "timeline_type": timeline_type,
-            "next_module_id": next_module.id,
             "state": "confirmed",
         }
+        if next_module:
+            vals["next_module_id"] = next_module.id
         vals.update(values)
         return cls.env["odoo.module.branch.timeline"].create(vals)

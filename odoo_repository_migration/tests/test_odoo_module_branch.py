@@ -726,3 +726,118 @@ class TestOdooModuleBranch(MigrationCommon):
         self.assertFalse(mig.last_target_scanned_commit)
         self.assertEqual(mig.state, "replaced")
         self.assertFalse(mig.migration_scan)
+
+    def test_removed_module(self):
+        """Test migration data of a module removed.
+
+        Data input:
+            - source version = X
+            - target version = X+1
+            - module removed in X+1 without successor
+
+        Expected ouput:
+            - 'removed' should be set and the status should be 'removed'
+        """
+        self.odoo_repository.collect_migration_data = True
+        # Next version is X+1
+        next_branch = self.env["odoo.branch"].search(
+            [("sequence", "=", self.branch.sequence + 1)]
+        )
+        self.assertEqual(self.branch.next_id, next_branch)
+        # Generate migration data records
+        self.env["odoo.migration.path"].create(
+            {
+                "source_branch_id": self.branch.id,
+                "target_branch_id": next_branch.id,
+            }
+        )
+        self._simulate_migration_scan(
+            "target_commit1",
+            source=self.branch,
+            target=next_branch,
+            report={"process": "migrate", "results": {}},
+        )
+        # Module has been removed starting from X+1
+        self._create_module_timeline(self.module_branch, None, "removed")
+        self.assertTrue(self.module_branch._removed_in_target_version(next_branch))
+        self.assertFalse(
+            self.module_branch._renamed_to_module_in_target_version(next_branch)
+        )
+        self.assertFalse(
+            self.module_branch._replaced_by_module_in_target_version(next_branch)
+        )
+        # Check migration data
+        mig = self.module_branch.migration_ids
+        self.assertTrue(mig.removed)
+        self.assertFalse(mig.renamed_to_module_id)
+        self.assertFalse(mig.replaced_by_module_id)
+        self.assertFalse(mig.target_module_branch_id)
+        self.assertEqual(mig.state, "removed")
+        # No migration scan needed for removed modules
+        self.assertFalse(mig.migration_scan)
+
+    def test_renamed_then_removed_module(self):
+        """Test migration data of a module renamed then removed.
+
+        Data input:
+            - source version = X
+            - target version = X+2
+            - module renamed in X+1
+            - renamed module removed in X+2
+
+        Expected ouput:
+            - 'renamed_to_module_id' should be empty
+            - 'removed' should be set and the status should be 'removed'
+        """
+        self.odoo_repository.collect_migration_data = True
+        # Next version is X+1
+        next_branch = self.env["odoo.branch"].search(
+            [("sequence", "=", self.branch.sequence + 1)]
+        )
+        self.assertEqual(self.branch.next_id, next_branch)
+        # Target version is X+2
+        target_branch = self.env["odoo.branch"].search(
+            [("sequence", "=", self.branch.sequence + 2)]
+        )
+        self.assertEqual(self.branch.next_id.next_id, target_branch)
+        # Create the next module
+        next_module = self.module.copy({"name": "next_module"})
+        next_module_branch = self._create_odoo_module_branch(
+            next_module,
+            next_branch,
+            specific=False,
+            repository_branch_id=self.repo_branch2.id,
+            last_scanned_commit="sha_next",
+        )
+        # Generate migration data records from X to X+2 (with a gap)
+        self.env["odoo.migration.path"].create(
+            {
+                "source_branch_id": self.branch.id,
+                "target_branch_id": target_branch.id,
+            }
+        )
+        self._simulate_migration_scan(
+            "target_commit1",
+            source=self.branch,
+            target=target_branch,
+            report={"process": "migrate", "results": {}},
+        )
+        # Module has been renamed in X+1
+        self._create_module_timeline(self.module_branch, next_module, "renamed")
+        # The renamed module has been removed in X+2
+        self._create_module_timeline(next_module_branch, None, "removed")
+        self.assertTrue(self.module_branch._removed_in_target_version(target_branch))
+        self.assertFalse(
+            self.module_branch._renamed_to_module_in_target_version(target_branch)
+        )
+        self.assertFalse(
+            self.module_branch._replaced_by_module_in_target_version(target_branch)
+        )
+        # Check migration data
+        mig = self.module_branch.migration_ids
+        self.assertTrue(mig.removed)
+        self.assertFalse(mig.renamed_to_module_id)
+        self.assertFalse(mig.replaced_by_module_id)
+        self.assertFalse(mig.target_module_branch_id)
+        self.assertEqual(mig.state, "removed")
+        self.assertFalse(mig.migration_scan)

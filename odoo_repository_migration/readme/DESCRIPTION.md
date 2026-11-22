@@ -19,6 +19,7 @@ Given a migration path, a module can get one of this migration status:
 | *Ported (missing commits?)* | Some commits from source version are not ported in target version (could be false-positive) |
 | *To review* | A migration PR has been detected |
 | *Replaced* | The module has been replaced by another one (not sharing the same git history) |
+| *Removed* | The module has been removed and has no successor (e.g. dropped upstream) |
 | *Moved to standard?* | The module name has been detected in Odoo standard repositories for target version. High chance this module is or should be replaced by another one instead (by creating a timeline), so it mainly helps to detect such cases. |
 | *Moved to OCA* | the module name is available in an OCA repository (could be a false-positive because sharing the same name, in such case a timeline has to be created) |
 | *Moved to generic repo* | a specific module (only available in a project) in source version now exists in a generic repository (could be a false-positive if both modules have only their name in common) |

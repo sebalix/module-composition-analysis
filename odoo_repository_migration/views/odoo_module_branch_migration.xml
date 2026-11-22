@@ -25,6 +25,7 @@
                                 name="renamed_to_module_id"
                                 invisible="not renamed_to_module_id"
                             />
+                            <field name="removed" invisible="not removed" />
                             <field name="target_module_branch_id" />
                         </group>
                         <group name="scan" string="Scan">

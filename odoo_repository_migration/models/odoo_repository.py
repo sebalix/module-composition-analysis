@@ -204,6 +204,17 @@ class OdooRepository(models.Model):
                 f"{replaced_by_module.name}, no need to collect "
                 "migration data."
             )
+        # Skip migration scan if module has been removed in next versions
+        if module._removed_in_target_version(migration_path.target_branch_id):
+            values = {
+                "module_branch_id": module_branch_id,
+                "migration_path_id": migration_path_id,
+                "last_source_scanned_commit": module.last_scanned_commit,
+            }
+            self.env["odoo.module.branch.migration"]._create_or_update(
+                module_branch_id, migration_path, values
+            )
+            return f"{module.name} has been removed, no need to collect migration data."
         # Check if module has already been migrated on target version but in a
         # different repository. If so, tune the scanner parameters to perform
         # the scan from current repo to new one.

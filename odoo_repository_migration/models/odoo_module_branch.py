@@ -55,6 +55,10 @@ class OdooModuleBranch(models.Model):
             )
             if not timelines:
                 continue
+            if timelines.timeline_type == "removed":
+                # The module has no successor: the lineage stops here
+                rec.next_odoo_version_module_branch_id = False
+                continue
             rec.next_odoo_version_module_branch_id = self.search(
                 [
                     ("branch_sequence", ">=", rec.branch_id.next_id.sequence),
@@ -80,6 +84,9 @@ class OdooModuleBranch(models.Model):
             timeline = next_.timeline_ids.filtered(
                 lambda t: t.active and t.state == "confirmed"
             )
+            if timeline.timeline_type == "removed":
+                # The module (or the module replacing it) has no successor
+                return self.env["odoo.module"]
             if timeline.timeline_type == "replaced":
                 replaced_by = timeline.next_module_id
             next_ = next_.next_odoo_version_module_branch_id
@@ -105,9 +112,9 @@ class OdooModuleBranch(models.Model):
             timeline = next_.timeline_ids.filtered(
                 lambda t: t.active and t.state == "confirmed"
             )
-            # As soon as the module has been replaced in the chain of versions
-            # it cannot be considered as renamed anymore
-            if timeline.timeline_type == "replaced":
+            # As soon as the module has been replaced or removed in the chain
+            # of versions it cannot be considered as renamed anymore
+            if timeline.timeline_type in ("replaced", "removed"):
                 renamed_to = self.env["odoo.module"]
                 next_ = False
                 continue
@@ -115,6 +122,24 @@ class OdooModuleBranch(models.Model):
                 renamed_to = timeline.next_module_id
             next_ = next_.next_odoo_version_module_branch_id
         return renamed_to
+
+    def _removed_in_target_version(self, target_branch):
+        """Return True if the module has been removed in the last versions.
+
+        Look for current + next modules as the migration scan could do a jump
+        14.0 -> 18.0, while a module has been removed starting from 18.0 (and
+        therefore flagged as removed in 17.0 module data).
+        """
+        self.ensure_one()
+        next_ = self
+        while next_ and next_.branch_sequence < target_branch.sequence:
+            timeline = next_.timeline_ids.filtered(
+                lambda t: t.active and t.state == "confirmed"
+            )
+            if timeline.timeline_type == "removed":
+                return True
+            next_ = next_.next_odoo_version_module_branch_id
+        return False
 
     def _get_next_versions(
         self, target_branch=None, order="branch_sequence", limit=None

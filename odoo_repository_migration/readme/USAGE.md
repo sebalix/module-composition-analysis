@@ -1,8 +1,9 @@
 To enable this feature, the option *Collect migration data* should be
 enabled on repositories (opt-in).
 
-To record what a module became starting from a given Odoo version, you
-should do it through the *Odoo Repositories / Data / Modules /
+To record what a module became starting from a given Odoo version
+(renamed, replaced by another module, or removed without any successor),
+you should do it through the *Odoo Repositories / Data / Modules /
 Timelines* menu.
 
 A timeline is created as *draft*: it has no effect on the migration data

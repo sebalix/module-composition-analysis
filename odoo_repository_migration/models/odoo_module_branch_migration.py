@@ -101,6 +101,11 @@ class OdooModuleBranchMigration(models.Model):
         store=True,
         index=True,
     )
+    removed = fields.Boolean(
+        compute="_compute_removed",
+        store=True,
+        help="Module removed in the target version (no successor).",
+    )
     state = fields.Selection(
         selection=[
             ("fully_ported", "Fully Ported"),
@@ -108,6 +113,7 @@ class OdooModuleBranchMigration(models.Model):
             ("port_commits", "Ported (missing commits?)"),
             ("review_migration", "To review"),
             ("replaced", "Replaced"),
+            ("removed", "Removed"),
             ("moved_to_standard", "Moved to standard?"),
             ("moved_to_oca", "Moved to OCA"),
             ("moved_to_generic", "Moved to generic repo"),
@@ -229,7 +235,17 @@ class OdooModuleBranchMigration(models.Model):
                 )
             )
 
+    # NOTE: _removed_in_target_version relies also on timelines, and
+    # this computed field will be recomputed automatically on timeline updates.
+    @api.depends("target_branch_id")
+    def _compute_removed(self):
+        for rec in self:
+            rec.removed = rec.module_branch_id._removed_in_target_version(
+                rec.target_branch_id
+            )
+
     @api.depends(
+        "removed",
         "replaced_by_module_id",
         "process",
         "pr_url",
@@ -239,6 +255,10 @@ class OdooModuleBranchMigration(models.Model):
     )
     def _compute_state(self):
         for rec in self:
+            if rec.removed:
+                # Module removed without any successor
+                rec.state = "removed"
+                continue
             if rec.replaced_by_module_id:
                 # Module replaced by another one
                 rec.state = "replaced"
@@ -281,6 +301,7 @@ class OdooModuleBranchMigration(models.Model):
 
     @api.depends(
         "module_branch_id.last_scanned_commit",
+        "removed",
         "replaced_by_module_id",
         "repository_id.collect_migration_data",
         "last_source_scanned_commit",
@@ -300,6 +321,9 @@ class OdooModuleBranchMigration(models.Model):
                 continue
             # No migration scan for modules moved to Odoo/OCA/generic repo
             if rec.state and rec.state.startswith("moved_to"):
+                continue
+            # No migration scan for modules removed without any successor
+            if rec.removed:
                 continue
             # No migration scan for modules replaced by another module
             if rec.replaced_by_module_id:
@@ -325,6 +349,7 @@ class OdooModuleBranchMigration(models.Model):
         self_sudo.results = self_sudo.process = False
         self_sudo._compute_replaced_by_module_id()
         self_sudo._compute_renamed_to_module_id()
+        self_sudo._compute_removed()
         self_sudo._compute_target_module_branch_id()
         self_sudo._compute_state()
         self_sudo._compute_migration_scan()

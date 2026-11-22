@@ -88,6 +88,14 @@ class TestOdooModuleBranchTimeline(MigrationCommon):
         self.assertEqual(timeline.state, "draft")
         self.assertFalse(self.module_branch_a.next_odoo_version_module_branch_id)
 
+    def test_next_odoo_version_module_branch_id_with_removed_module(self):
+        """A removed timeline stops the lineage: there is no next module."""
+        timeline = self._create_module_timeline(self.module_branch_a, None, "removed")
+        self.assertFalse(self.module_branch_a.next_odoo_version_module_branch_id)
+        self.assertTrue(self.module_branch_a._removed_in_target_version(self.branch2))
+        self.assertFalse(timeline.next_module_id)
+        self.assertIn("(removed)", timeline.display_name)
+
     def test_draft_timeline_no_migration_refresh(self):
         """Migration data are refreshed (scan reset) only once a timeline is
         confirmed: drafts have no effect on them."""
@@ -211,3 +219,23 @@ class TestOdooModuleBranchTimeline(MigrationCommon):
         # The new module may already exist on the same version as the module
         # (e.g. a module name reused across Odoo versions)
         self._create_module_timeline(self.module_branch_a, self.module, "renamed")
+
+    def test_removed_module(self):
+        """A removed timeline has no new module; switching types is validated."""
+        timeline = self._create_module_timeline(self.module_branch_a, None, "removed")
+        self.assertEqual(timeline.timeline_type, "removed")
+        self.assertFalse(timeline.next_module_id)
+        # A new module is forbidden for a removed timeline
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self._create_module_timeline(self.module_branch_b, self.module_c, "removed")
+        # Switching a removed timeline back to renamed requires a new module
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            timeline.write({"timeline_type": "renamed"})
+        # Providing both is accepted
+        timeline.write({"timeline_type": "renamed", "next_module_id": self.module_b.id})
+        self.assertEqual(timeline.next_module_id, self.module_b)
+        # Switching back to removed clears the new module
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            timeline.write({"timeline_type": "removed"})
+        timeline.write({"timeline_type": "removed", "next_module_id": False})
+        self.assertFalse(timeline.next_module_id)

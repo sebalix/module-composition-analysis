@@ -85,7 +85,11 @@
                         <field name="last_known_module_branch_id" />
                         <field name="odoo_version_id" />
                         <field name="timeline_type" readonly="state == 'confirmed'" />
-                        <field name="next_module_id" readonly="state == 'confirmed'" />
+                        <field
+                            name="next_module_id"
+                            readonly="state == 'confirmed'"
+                            invisible="timeline_type == 'removed'"
+                        />
                         <field
                             name="next_module_branch_id"
                             invisible="not next_module_branch_id"
@@ -139,6 +143,11 @@
                     name="replaced"
                     string="Replaced"
                     domain="[('timeline_type', '=', 'replaced')]"
+                />
+                <filter
+                    name="removed"
+                    string="Removed"
+                    domain="[('timeline_type', '=', 'removed')]"
                 />
                 <separator />
                 <filter
